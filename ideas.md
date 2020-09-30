@@ -60,26 +60,30 @@
   - `X, Y : Scheme` objects of some category
   - **Note**: an object $X$ is the same as its identity morphism $\text{id}_X$
 
-  
 
-- Class *Functor* extends *Morphism* { Bool covariant } [Not sure if we actually need this: a Morphism is a Functor precisely if its category is `Category`]
 
-  - The $\text{Spec}​$ functor `Spec : ~Ring -> Scheme  `  (some notation like this to denote covariantness/contravariantness)
+- ~~Class *Functor* extends *Morphism* { Bool covariant } [Not sure if we actually need this: a Morphism is a Functor precisely if its category is `Category`]~~
+  - The $\text{Spec}​$ functor `Spec : Ring' -> Scheme  `  (some notation like this to denote covariantness / contravariantness)
 
   - Forgetful functors, e.g. `Top : Scheme -> Top` yielding the underlying topological space
 
-  - The proofs-functor `Proof / # / @ / $ / [-] : Prop -> Cat ` which sends $P$ to the category of proofs of $P$. Indeed an implication $P \to Q$ yields a functor [Proofs of $P$] $\to$ [Proofs of $Q$]
+  - ~~The proofs-functor `Proof / # / @ / $ / [-] : Prop -> Cat ` which sends $P$ to the category of proofs of $P$. Indeed an implication $P \to Q$ yields a functor [Proofs of $P$] $\to$ [Proofs of $Q$]~~
 
-    
+  
 
-- Class *Representation* { Object* object_that_it_points_to, — data —  }
+- Class *Representation* { Morphism* morphism_that_it_points_to, — data —, void replace(Morphism* x, Morphism* y) }
 
   - Symbols `X, R, f, g` 
   - ~~Special keywords `dom(-)`, `cod(-)`, `id(-)`~~
-  - Composition of morphisms `$(f, g, h)`
-  - Category operators `&`, `|`, `=>`, `~`, `op`
+  - Composition of morphisms `f.g.h`
+  - Category operators `&` (and/product), `|` (or/coproduct) , `=>` (implies/exponential), `~` (not), `'` (opposite/dual)
   - Functor applications `Spec(R), Top(X), Top(f)`
   - Adjective / Property applications [?] `affine(X), etale(f), cartesian(X, Y, f, g, ...)`
+  - **Note**: when creating a representation, the representation may be reduced to a simpler form which is stored instead. Also, when the representation is updated (i.e. when two morphisms are equated), the representation may be reduced even further. However, it should be deterministic in some sense.
+    - When `C` and `D` are categories which are natural numbers, the representation of `C => D` will automatically be reduced to `pow(C, D)`. The same holds for `C & D`, `C | D`, `op(C)` etc.
+    - Reduce `C => D` to `0` if `D` is `0` and there exists an object in `C`
+    - Reduce `C => D` to `1` if `D` is `1` or  `C` is `0`
+    - Composition `f # X # g` with (`X` an Object, i.e. identity morphism) reduces to `f # g`
 
   
 
@@ -91,7 +95,7 @@
   - Compositions of morphisms
   - Used in Theorems, and for Examples
   - Lots of examples here of course
-  - **Reminder:** for things like the category of $R​$-modules, maybe the diagram could just include $R​$. But then there needs to be some function/functor/map `Ring -> Cat`. Well yes! Note that `Mod : Ring* -> Cat` is a contravariant functor! It sends a ring $R​$ to the category $R​$-Mod. The same holds for `Alg : Ring* -> Cat`.
+  - **Reminder:** for things like the category of $R$-modules, maybe the diagram could just include $R$. But then there needs to be some function/functor/map `Ring -> Cat`. Well yes! Note that `Mod : Ring* -> Cat` is a contravariant functor! It sends a ring $R$ to the category $R$-Mod. The same holds for `Alg : Ring* -> Cat`.
     - Now of course the problem is how to interpret e.g. tensor products and direct sums.. It seems that we need to associate Diagrams to Diagrams.
       - Possible solution: again it is an adjective! `Tensor(L, M, N)` says whether or not $L$ is the tensor product of $M, N$ (maybe we have to specify additional maps, check the definition..)
 
@@ -148,6 +152,14 @@
 
 
 
+**Default / Core objects**
+
+- `Cat / Category` the category of categories, its category is itself.
+
+- `0, 1` the empty category and the category of one element. They are also denoted `True` and `False`. Any natural number $n \in \N$ should automatically be associated a category, but of course they cannot exist all by default due to not having infinite memory.
+
+  
+
 ##### How to deal with Propositions?
 
 1. Treat propositions completely separately from categories, i.e. propositions are not objects in a category, but just objects of class Prop.
@@ -165,6 +177,21 @@
 
 
 
+##### Optional
+
+- Class *Category* extends *Object* {  }
+
+  - Any category
+
+  
+
+- Class *Number* extends *Category* {}
+
+  - Any number
+  - **Note**: a number $n$ is represented by the category consisting of $n$ objects. E.g. `0` is the empty category, and `1` is the category with one identity morphism, etc.
+
+  
+
 ##### What functionality we want to be able to implement:
 
 - `R : Ring`, `X, Y : Scheme` to define objects of a given category
@@ -175,25 +202,30 @@
 
 
 
-- `P, Q : Prop` do propositional logic as well
+- ~~`P, Q : Prop`~~ do propositional logic as well `P, Q : Category`
 - `R = P & Q;   S = P | Q;   T = P => Q;   U = ~P`
+- Do numbers! `n = 3; m = 4; n + m / n | m; n * m / n & m; n ^ m / m => n (note the order)`
 
 
+
+- `M, N : Mod(R)`
+- ~~`Tensor(M, N) `~~
+- ~~`F = Tensor(-, M)` which will be of type `Mod(R) -> Mod(R)`~~
+
+
+
+- ~~(Co)limits~~ (replaced by saying that a diagram is a limit or not)
+
+  - Limits: Pullbacks (products), equalizers
+
+  - Colimits: Pushouts (coproducts), coequalizers
+
+    
 
 **Instructions:**
 
-- `assume Q`
-- `prove P => Q`
-
-
-
-**Extensions**:
-
-- ~~(Co)limits~~ (replaced by saying that a diagram is a limit or not)
-  - Limits: Pullbacks (products), equalizers
-  - Colimits: Pushouts (coproducts), coequalizers
-
-
+- `assume Q` (this amounts to creating a (representation-less) object (i.e. proof) of the given category)
+- `prove P => Q` (this amounts to finding an object (i.e. proof) of the given category)
 
 **Not sure about:**
 
@@ -211,20 +243,7 @@
 
     
 
-- `f : X -> S; g : Y -> S; Z = FiberProduct(f, g) ` ??? **Very problematic!** What even is its type? Because it comes with projection maps etc.
-
-
-
-
-
-##### Maybe:
-
-- `M, N : Mod(R)`
-- ~~`Tensor(M, N) `~~
-
-- ~~`F = Tensor(-, M)` which will be of type `Mod(R) -> Mod(R)`~~
-
-
+- ~~`f : X -> S; g : Y -> S; Z = FiberProduct(f, g) ` ??? **Very problematic!** What even is its type? Because it comes with projection maps etc.~~
 
 
 
