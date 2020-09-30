@@ -1,0 +1,238 @@
+- Have *Objects* all of a certain *Type*, each having a set of *Representations / Expressions* (up to isomorphism)
+- Such expressions can be built from other objects using *Relations / Functions*
+
+
+
+- *Theorems* consist of a context and a conclusion
+- *Context* is a list of placeholders to which the theorem applies (this may include proofs/assumptions)
+
+- *Conclusion* is a list of instructions that may be executed to however the context is applied to the workspace
+
+
+
+- There is some global *Workspace* containing all Objects, Types, Theorems, etc.
+
+- *Instruction* is a rule to change the workspace
+
+---------------------
+
+
+
+### Slogan
+
+*"For proving and disproving abstract nonsense."*
+
+
+
+### Category based system
+
+- There are *Objects* and *Morphisms / Arrows*, each living in some *Category*. A *Morphism* also has a *Domain* and *Codomain / Target*, which are objects of the same category.
+- Note that we cannot have a fixed number of categories, some categories can depend on objects of another category, e.g. the category of $R$-modules, for some ring $R$.
+- Objects and morphisms can have more than one *Representation*. For example, if $f, g, h$ are morphisms, they are represented by the *Symbols* $f, g, h$. It can be that $f \circ g = h$. Every representation will point to a object or morphism, and when equating (i.e. saying two things are isomorphic) to objects or morphisms, we simply merge them so that every representation points to the same thing.
+- There are *Functions*, which take a number of objects and/or morphisms, and produce a new object/morphism. [?]
+- Note: tensoring $- \otimes_R M$ should be a function that inputs a ring $R$, an $R$-module $M$, and outputs a morphism $R$-Mod $\to $ $R$-Mod. Hence, the type of certain input objects may depend on other input objects.
+  - An option is to do this using *Placeholders*? That is, when defining the above function, we could first declare $R$ a placeholder object of $\textbf{Ring}$, and then $- \otimes_R- $ as a map $R$-Mod $\times$ $R$-Mod $\to$ $R$-Mod.
+    - But then we need *Products* of categories.
+- How will the fiber product $- \times_S -$ be defined? It takes two morphisms $f : X \to S$ and $g : Y \to S$, and produces an object $X \times_S Y$ together with morphisms $X \times_S Y \to X$ and $X \times_S Y \to Y$. This is technically an object in some strange cone category.. Do we really want that?
+  - Then we at least need to make $\text{Hom}(-, S)$ a category.
+- Note: that not every function will be a functor! E.g. $\text{IsAffine} : \text{Sch} \to \text{Prop}$ will not be a functor! So we will need 'just functions'.
+
+
+
+
+
+##### Classes to implement, and what they will be used for:
+
+
+
+- Class *Morphism* { Object* domain, Object* codomain }
+
+  - `f : X -> Y` morphisms between objects in a category
+  - there are keywords `dom` and `cod` which represent the domain and codomain of the morphism (i.e. use `dom(f)` and `cod(f)`)
+  - there is a keyword `id(X)` which yields the identity morphism of an object $X$.
+
+  
+
+- Class *Object* extends *Morphism* { }
+
+  - `Category : Category` the category of categories
+  - `Ring, Scheme, Top : Category` other categories
+  - `X, Y : Scheme` objects of some category
+  - **Note**: an object $X$ is the same as its identity morphism $\text{id}_X$
+
+  
+
+- Class *Functor* extends *Morphism* { Bool covariant } [Not sure if we actually need this: a Morphism is a Functor precisely if its category is `Category`]
+
+  - The $\text{Spec}​$ functor `Spec : ~Ring -> Scheme  `  (some notation like this to denote covariantness/contravariantness)
+
+  - Forgetful functors, e.g. `Top : Scheme -> Top` yielding the underlying topological space
+
+  - The proofs-functor `Proof / # / @ / $ / [-] : Prop -> Cat ` which sends $P$ to the category of proofs of $P$. Indeed an implication $P \to Q$ yields a functor [Proofs of $P$] $\to$ [Proofs of $Q$]
+
+    
+
+- Class *Representation* { Object* object_that_it_points_to, — data —  }
+
+  - Symbols `X, R, f, g` 
+  - ~~Special keywords `dom(-)`, `cod(-)`, `id(-)`~~
+  - Composition of morphisms `$(f, g, h)`
+  - Category operators `&`, `|`, `=>`, `~`, `op`
+  - Functor applications `Spec(R), Top(X), Top(f)`
+  - Adjective / Property applications [?] `affine(X), etale(f), cartesian(X, Y, f, g, ...)`
+
+  
+
+- Class *Diagram* { List\<Object\*\> objects, List\<Morphism\*\> morphisms, List\<Representation*\> representations?, List\<Condition\*\> conditions? }
+
+  - Diagrams with a single object
+  - Diagrams with a single morphism, and two objects
+  - Cartesian squares
+  - Compositions of morphisms
+  - Used in Theorems, and for Examples
+  - Lots of examples here of course
+  - **Reminder:** for things like the category of $R​$-modules, maybe the diagram could just include $R​$. But then there needs to be some function/functor/map `Ring -> Cat`. Well yes! Note that `Mod : Ring* -> Cat` is a contravariant functor! It sends a ring $R​$ to the category $R​$-Mod. The same holds for `Alg : Ring* -> Cat`.
+    - Now of course the problem is how to interpret e.g. tensor products and direct sums.. It seems that we need to associate Diagrams to Diagrams.
+      - Possible solution: again it is an adjective! `Tensor(L, M, N)` says whether or not $L$ is the tensor product of $M, N$ (maybe we have to specify additional maps, check the definition..)
+
+
+
+- Class *Workspace* { List\<Item\> items, List\<Representation\> reps }
+  - Workspace of examples
+  - 'Working' workspace
+
+
+
+- Class *Condition* { — data — }
+
+  - Equality of objects or morphisms
+  - Certain proof of a proposition
+
+  
+
+- Class *Adjective / Property* { Diagram* diagram, (String name?) }
+  - Adjectives of objects and morphisms `smooth, flat, etale, unramified, ...`
+  - Adjectives of squares `pullback, pushout, ...`
+  - Adjectives of compositions, maybe, like if we wanted to..
+  - **Note**: the 'output' of an adjective is a category! Generally, this is interpreted as the category of proofs of some statement about the category. For example, `affine(X)` is the category of proofs that $X$ is affine.
+  - **Note**: the name of a property need not be unique, as long as two properties with the same name have 'non-clashing' diagrams (whatever that means)
+
+
+
+- Class *Theorem* { Diagram* setting, List\<Instruction*\> conclusions }
+  - Lots of examples here of course (this is part of what the program is all about!)
+
+
+
+- Class *Instruction* { ? } 
+
+  - Equality, setting two objects equal (i.e. isomorphic)
+    - **Note**: really have to be careful with this!!!
+  - Adding an object/morphism to the diagram. E.g. `{ X affine } =(Thm)=> X = Spec(R) for some R : Ring`
+  - ~~Adding a proposition to the diagram~~ [This is the same as adding a proof of the statement as an object]
+
+
+
+- ~~?Class *Function* { Diagram* input_diagram, Diagram* output_diagram }~~
+  - ~~Adjectives of objects and morphisms `smooth, flat, etale, unramified, ...`~~
+  - ~~Dimension?~~ If we want to incorporate dimensions, then just let `dim(X)` be the category $\Z$ where $n \in \Z$ denotes a proof that $X$ is of dimension $n$. Although, not sure how to implement it.
+  - **NOTE**: to have (counter-)examples, it is important that the properties of an object are really binded to the object!
+    - Or more generally, we have a *Diagram* consisting of Objects, Morphisms and conditions on those. Then `cartesian/pullback` could be an Adjective!
+    - An *Adjective* could be associated to certain Diagrams in certain categories. E.g. objects can have adjectives (diagram consisting of 1 object), morphisms (diagram consisting of 1 morphism (and 2 objects then as well, right)), and squares (diagram $X, Y, W, S, f : X \to S, g : Y \to S, \pi_1 : W \to X, \pi_2 : W \to Y​$) can be 'cartesian', or a 'pushout'.
+
+
+
+- ~~? Class *Category* extends *Object* { Bool has_products, Bool has_coproducts, Bool has_exponents, Bool has_initial, Bool has_final, etc. }~~
+  - ~~Then `Prop` can be considered a category, which may be nice?~~
+- ~~? Class *HeytingAlgebra* extends *Category* {  }~~
+
+
+
+##### How to deal with Propositions?
+
+1. Treat propositions completely separately from categories, i.e. propositions are not objects in a category, but just objects of class Prop.
+
+2. ~~Treat Prop also as a category, and therefore something like `affine(X)` is actually an object in a *Diagram*.~~
+3. Treat the output of an Adjective as a Category! In particular, an object of the category `affine(X)` represents a proof that $X​$ is affine. Then we can actually have the proofs be part of the diagram.
+
+   - Then: how to deal with connectors like `&`, `|`, `=>`, `~` ?
+
+     - They can be implemented as operators on Categories, creating new categories. They follow certain rules.
+
+   - Might actually let `Prop` be equal to `Cat`, just a different representation? Don't see the use of having propositions outside of them being proofs.
+
+     
+
+
+
+##### What functionality we want to be able to implement:
+
+- `R : Ring`, `X, Y : Scheme` to define objects of a given category
+- `Ring, Scheme, Top, (Set?): Category` including categories themselves
+- `f : X -> Y` to define morphisms between objects (must be of the same category)
+- `Spec : ~Ring -> Scheme` to define functors between categories (think about how to encode covariantness/contravariantness). They can be stored as a (*Functor* extends *Morphism*)?
+- `X = Spec(R)` will be of type `Scheme` (same for morphisms).
+
+
+
+- `P, Q : Prop` do propositional logic as well
+- `R = P & Q;   S = P | Q;   T = P => Q;   U = ~P`
+
+
+
+**Instructions:**
+
+- `assume Q`
+- `prove P => Q`
+
+
+
+**Extensions**:
+
+- ~~(Co)limits~~ (replaced by saying that a diagram is a limit or not)
+  - Limits: Pullbacks (products), equalizers
+  - Colimits: Pushouts (coproducts), coequalizers
+
+
+
+**Not sure about:**
+
+- ~~How to implement adjectives of objects / morphisms?~~
+
+  - They can either be expressed as *Functions* with data about input and output categories, and whether they should be morphisms 
+
+  - Or they are expressed as functors `Ob(Scheme) -> Prop` or `Hom(Scheme) -> Prop`
+
+    - ~~`affine, separated : Obj(Scheme) -> Prop ` will be stored as a *Function* from `Scheme` to `Prop`~~
+    - ~~`etale, flat : Mor(Scheme) -> Prop`~~
+    - But then, what is `Ob` and what is `Hom` ?
+
+  - Or they are special classes itself *Adjective* { Object* category, Bool object_or_morphism }
+
+    
+
+- `f : X -> S; g : Y -> S; Z = FiberProduct(f, g) ` ??? **Very problematic!** What even is its type? Because it comes with projection maps etc.
+
+
+
+
+
+##### Maybe:
+
+- `M, N : Mod(R)`
+- ~~`Tensor(M, N) `~~
+
+- ~~`F = Tensor(-, M)` which will be of type `Mod(R) -> Mod(R)`~~
+
+
+
+
+
+
+
+
+
+
+
+
+
