@@ -18,6 +18,15 @@ class Morphism:
         self.domain = domain
         self.codomain = codomain
 
+    def is_object(self):
+        return self == self.domain
+
+    def is_functor(self):
+        return self.category == Cat
+    
+    def is_category(self):
+        return self.is_object() and self.is_functor()
+
 
 # In[2]:
 
@@ -87,7 +96,7 @@ class Repr_Symbol(Representation):
         return type(self) == type(other) and self.name == other.name
     
     def dependencies(self):
-        if isinstance(self.ptr, Object):
+        if self.ptr.is_object():
             return [ self.ptr.category ]
         else:
             return [ self.ptr.domain, self.ptr.codomain ]
@@ -200,7 +209,7 @@ def are_comparable(x, y):
         return False
     
     # Two morphisms are only comparable if their (co)domain matches, or if both are identity morphisms
-    if (x.domain, x.codomain) != (y.domain, y.codomain) and not (isinstance(x, Object) and isinstance(y, Object)):
+    if (x.domain, x.codomain) != (y.domain, y.codomain) and not x.is_object() and y.is_object():
         return False
     
     return True
@@ -259,6 +268,24 @@ class Diagram:
         
         return None
     
+    def has_instance_of(self, C):
+        for x in self.morphisms:
+            if x.category == C:
+                return True
+        
+        if not self.owns(C): # TODO: this is not clean! Not every reference even needs to know about C!    
+            for ref in self.references:
+                if ref.has_instance_of(C):
+                    return True
+            
+        return False
+    
+    def is_name_available(self, name):
+        if self.has_symbol(name):
+            return False
+        
+        return True
+    
     def has_symbol(self, name):
         for r in self.representations:
             if isinstance(r, Repr_Symbol) and r.name == name:
@@ -275,6 +302,9 @@ class Diagram:
                 return True
         
         return False
+    
+    def owns(self, x):
+        return x in self.morphisms
     
     def owner(self, x):
         if x in self.morphisms:
@@ -377,7 +407,7 @@ class Diagram:
                 raise Exception('Morphisms do not connect well!')
             
         # Remove all identity morphisms from the list
-        f_list = [ f for f in f_list if not isinstance(f, Object) ]
+        f_list = [ f for f in f_list if not f.is_object() ]
                 
         # If the list is empty now, then the result would have been id(X) = id(Y)
         n = len(f_list)
@@ -426,7 +456,7 @@ class Diagram:
             return F_x
         
         # Construct new object/morphism
-        if isinstance(x, Object):        
+        if x.is_object():
             F_x = Object(F.codomain)
         else:
             X = x.domain
@@ -507,14 +537,15 @@ class Diagram:
         
         return C
     
-    def from_placeholders(self, r, M):
+    def create_from_placeholders(self, r, M):
         if isinstance(r, Repr_Symbol):
             C = r.ptr.category
-            if isinstance(r.ptr, Object):
-                return self.create_symbol_object(self.create_name_like(r.name), M[C] if C in M else C)
+            if r.ptr.is_object():
+                return self.create_object(M[C] if C in M else C, self.create_name_like(r.name))
             else:
                 X, Y = r.ptr.domain, r.ptr.codomain
-                return self.create_symbol_morphism(self.create_name_like(r.name), M[X] if X in M else X, M[Y] if Y in M else Y)
+                covariant = r.ptr.covariant if r.ptr.category == Cat else True
+                return self.create_morphism(M[X] if X in M else X, M[Y] if Y in M else Y, self.create_name_like(r.name), covariant = covariant)
         
         if isinstance(r, Repr_Composition):
             return self.create_composition([ (M[f] if f in M else f) for f in r.f_list ])
@@ -600,6 +631,70 @@ class Context(Diagram):
     def add_condition(self, C):
         # ? TODO ?: check if condition depends only on the data
         self.conditions.append(C)
+        
+    def find_mapping(self, other_diagram, mapping = {}):
+        
+        # TODO: OPTIMIZE THIS A LOOOOTTTTT!
+        
+        for x in self.data:
+            if x in mapping:
+                continue
+            
+            x_is_object = x.is_object()
+            for y in other_diagram.morphisms: # TODO: should we also look through other_diagram.references ?
+                # Categories must match, and objects must be mapped to objects
+                if y.category != x.category or (x_is_object and not y.is_object()):
+                    continue
+                # (Co)domain must match
+                if not x_is_object:
+                    if x.domain in mapping and mapping[x.domain] != y.domain:
+                        continue
+                    if x.codomain in mapping and mapping[x.codomain] != y.codomain:
+                        continue
+                    if not self.owns(x.domain) and x.domain != y.domain:
+                        continue
+                    if not self.owns(x.codomain) and x.codomain != y.codomain:
+                        continue
+                
+                # Try the mapping
+                mapping[x] = y
+                if self.find_mapping(other_diagram, mapping):
+                    return True
+                # If unsuccessful, undo
+                del mapping[x]
+
+            return False
+        
+        # All the data is mapped. Now naturally extend the mapping to all morphisms of the context that depend on the data
+        mapping_ext = mapping.copy()
+        r_todo = [ r for r in self.representations if r.ptr not in mapping_ext and not isinstance(r, Repr_Symbol) ]        
+        updates = True
+        while updates:
+            updates = False
+            r_done = []
+            for r in r_todo:
+                # Can only extend the mapping to this representation if all its dependencies are already mapped
+                if any(x not in mapping_ext and x in self.morphisms for x in r.dependencies()):
+                    continue
+                                    
+                y = other_diagram.create_from_placeholders(r, mapping_ext)
+                mapping_ext[r.ptr] = y
+                r_done.append(r)
+                updates = True
+                
+            r_todo = [ r for r in r_todo if r not in r_done ]
+                        
+        # TODO: check if everything is well-mapped!
+            
+        # Verify conditions
+        for C in self.conditions:
+            if not other_diagram.has_instance_of(mapping_ext[C]):
+                return False
+                
+        # At this point we know that the mapping works, so update 'mapping'
+        mapping.update(mapping_ext)
+
+        return True
 
 
 # In[10]:
@@ -622,89 +717,31 @@ class Theorem(Context):
         
         self.conclusion = Diagram()
         self.conclusion.add_reference(self)
-    
-    def try_apply(self, other_diagram, mapping = {}):        
-        for x in self.data:
-            if x in mapping:
-                continue
-            
-            x_is_object = isinstance(x, Object)
-            for y in other_diagram.morphisms: # TODO: should we also look in other_diagram.references ?
-                # Categories must match
-                if y.category != x.category or (x_is_object and not isinstance(y, Object)):
-                    continue
-                # (Co)domain must match
-                if x.domain in mapping and mapping[x.domain] != y.domain:
-                    continue
-                if x.codomain in mapping and mapping[x.codomain] != y.codomain:
-                    continue
-                
-                # Try mapping
-                mapping[x] = y
-                if self.try_apply(other_diagram, mapping):
-                    return True
-                # If unsuccessful, undo
-                del mapping[x]
-
+        
+    def try_application(self, other_diagram, mapping = {}):
+        if not self.find_mapping(other_diagram, mapping):
             return False
         
-        # All the data is mapped. Now naturally extend the mapping to all morphisms of the theorem that depend on the data
-        mapping_ext = mapping.copy()
-        for x in self.morphisms: # TODO: CAN THIS EVEN HAPPEN, LIKE EVER? I DON'T THINK SO NAMELY..
-            if other_diagram.knows(x):
-                mapping_ext[x] = x
-        
-        r_todo = [ r for r in self.representations if r.ptr not in mapping_ext and not isinstance(r, Repr_Symbol) ]
-        
-        updates = True
-        while updates:
-            updates = False
+        # Apply conclusion
+        r_todo = [ r for r in self.conclusion.representations if r.ptr not in mapping ]
+        while r_todo:
             r_done = []
             for r in r_todo:
-                # Can only extend the mapping to this representation if all its dependencies are already mapped
-                if any(x not in mapping_ext and x in self.morphisms for x in r.dependencies()):
+                if any(x not in mapping and x in self.conclusion.morphisms for x in r.dependencies()):
                     continue
-                                    
-                y = other_diagram.from_placeholders(r, mapping_ext)
-                mapping_ext[r.ptr] = y
-                r_done.append(r)
-                updates = True
                 
+                y = other_diagram.create_from_placeholders(r, mapping)
+                mapping[r.ptr] = y
+                r_done.append(r)
+            
             r_todo = [ r for r in r_todo if r not in r_done ]
-                        
-        # TODO: check if everything is well-mapped!
             
-        # Verify conditions
-        for C in self.conditions:
-            C_mapped = mapping_ext[C]
-            for x in other_diagram.morphisms:
-                if x.category == C_mapped:
-                    break
-            else:
-                return False
-        
-        # At this point we know we can apply the theorem! We fix the mapping
-        mapping.update(mapping_ext)
-
-# TODO
-#         # Introduce new symbols that come with the theorem
-#         r_todo = [ r for r in self.representations if r.ptr not in mapping ]
-#         while r_todo:
-#             r_done = []
-#             for r in r_todo:
-#                 if any(x not in mapping and x in self.morphisms for x in r.dependencies()):
-#                     print('Cannot create placeholder for {}. It depends on {}'.format(self.str_x(r.ptr), ', '.join([ self.str_x(x) for x in r.dependencies() ])))
-#                     continue
-                    
-#                 y = factory.from_placeholders(r, mapping)
-#                 mapping[r.ptr] = y
-#                 r_done.append(r)
-            
-#             r_todo = [ r for r in r_todo if r not in r_done ]
-                    
-#         # Apply conclusions    
-#         for C in self.conclusion.:
-#             factory.create_object(other_diagram.create_name_like('c'), mapping[C])
+        # Finally, create objects in other_diagram for all objects that do not have a representation in the conclusion (i.e. mostly proofs of statements)
+        for x in self.conclusion.morphisms:
+            if x not in mapping:
+                C = mapping[x.category] if x.category in mapping else x.category
+                y = other_diagram.create_object(C)
+                mapping[x] = y
         
         return True
 
@@ -719,7 +756,7 @@ class Example(Diagram):
         
 
 
-# In[31]:
+# In[13]:
 
 
 class Book(Diagram):
@@ -766,8 +803,6 @@ _0 = Number(0)
 _1 = Number(1)
 
 
-# ### Examples
-
 # In[15]:
 
 
@@ -791,3 +826,10 @@ def recreate_global_diagram():
     global_diagram.add_representation(rep)
 
     return global_diagram
+
+
+# In[ ]:
+
+
+
+
