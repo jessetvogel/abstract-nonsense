@@ -58,7 +58,8 @@
   - `Category : Category` the category of categories
   - `Ring, Scheme, Top : Category` other categories
   - `X, Y : Scheme` objects of some category
-  - **Note**: an object $X$ is the same as its identity morphism $\text{id}_X$
+  - **Note:** an object $X$ is the same as its identity morphism $\text{id}_X$
+  - **Thought:** instead of having an extended class, `is_object() { return self == self.domain == self.codomain; }` might also work?
 
 
 
@@ -222,6 +223,14 @@
 
 
 
+##### About covariant/contravariant functors
+
+- Take e.g. `Mod : Ring ~> Cat`. A morphisms $f : A \to B$ indeed gives a functor `Mod(f) : Mod(B) -> Mod(A)` but how do we know if this resulting functor is covariant or contravariant? Well, just say it is always covariant! I think that makes sense.
+
+  Basically, we say that formally the morphisms of `Cat` are only covariant functors. Saying that a functor $F : \mathcal{C} \to \mathcal{D}$ is contravariant just means that it is actually a functor $F : \mathcal{C}^\text{op} \to \mathcal{D}$ or equivalently $F : \mathcal{C} \to \mathcal{D}^\text{op}$. When applying the functor to objects or morphisms, there is some implicit 'casting'. But in any case, if $\mathcal{D} = \textbf{Cat}$, then any induced functor $F(f) : F(x) \to F(y)$ will be covariant!
+
+  
+
 ##### What functionality we want to be able to implement:
 
 - `R : Ring`, `X, Y : Scheme` to define objects of a given category
@@ -281,7 +290,14 @@
 
 
 
+##### Parsing expressions
 
+Parsing an expression can be done when given a String `s` and a reference Diagram `diagram` . The strategy is to parse from the inside out using regular expressions. When a certain substring has been parsed, it is replaced by `$n` with $n \in \N$, and the reference to the relevant object is stored in a list (at index $n$ obviously).
+
+- If `s` is numeric (i.e. `\d+`), return (or create) the relevant `Number`
+- If `s` is a word (i.e. `[A-Za-z_]\w*`), 
+- If `s` has the form `\w+\( whatever \)`
+  - If the `\w+` part refers to a functor (morphism between categories), 
 
 
 

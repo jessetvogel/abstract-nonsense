@@ -1,0 +1,22 @@
+# Define the categories of rings and schemes
+let Ring, Scheme : Cat
+
+# Define a contravariant functor from Ring to Scheme
+let Spec : Ring ~> Scheme
+
+# Define the property 'affine', which takes as data a scheme X
+property affine {
+	given X : Scheme
+}
+
+property qcompact {
+	given X : Scheme
+}
+
+# Define a 'theorem' that states that affine schemes are isomorphic to Spec(R) for some ring R
+
+theorem my_thm {
+	given X : Scheme with affine(X)
+	then exists R : Ring
+	then X = Spec(R)
+}
