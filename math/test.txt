@@ -18,7 +18,7 @@ property qcompact {
 theorem my_thm {
 	given X : Scheme
 	with affine(X)
-	then R : Ring
+	then exists R : Ring
 	then X = Spec(R)
 }
 

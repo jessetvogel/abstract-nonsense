@@ -18,12 +18,6 @@
 
 
 
-### Slogan
-
-*"For proving and disproving abstract nonsense."*
-
-
-
 ### Category based system
 
 - There are *Objects* and *Morphisms / Arrows*, each living in some *Category*. A *Morphism* also has a *Domain* and *Codomain / Target*, which are objects of the same category.
@@ -300,4 +294,8 @@ Parsing an expression can be done when given a String `s` and a reference Diagra
   - If the `\w+` part refers to a functor (morphism between categories), 
 
 
+
+### Slogan
+
+*"For proving and disproving abstract nonsense."*
 
