@@ -91,7 +91,7 @@ class Repr_Symbol(Representation):
     
     def __init__(self, name):
         self.name = name
-        
+    
     def __eq__(self, other):
         return type(self) == type(other) and self.name == other.name
     
@@ -247,7 +247,7 @@ class Diagram:
                 return r.ptr
                 
         return None
-    
+        
     def find_morphism(self, name):
         for r in self.representations:
             if isinstance(r, Repr_Symbol) and r.name == name:
@@ -269,6 +269,10 @@ class Diagram:
         return None
     
     def has_instance_of(self, C):
+        # A number n has an instance precisely if n > 0
+        if isinstance(C, Number):
+            return C.n > 0
+        
         for x in self.morphisms:
             if x.category == C:
                 return True
@@ -306,14 +310,24 @@ class Diagram:
     def owns(self, x):
         return x in self.morphisms
     
-    def owner(self, x):
+    def get_owner(self, x):
         if x in self.morphisms:
             return self
         
-        if self.parent:
-            return self.parent.owner(x)
+        for ref in self.references:
+            owner = ref.owner(x)
+            if owner:
+                return owner
         
         return None
+    
+    def get_representations(self, x):
+        reps = [ r for r in self.representations if r.ptr == x ]
+        if not self.owns(x):
+            for ref in self.references: # TODO: not every reference needs to know about x ..
+                reps = reps + ref.get_representations(x) # TODO: remove duplicates
+        
+        return reps
     
     def create_name_like(self, name):
         used_names = [ r.name for r in self.representations if isinstance(r, Repr_Symbol) and r.name.startswith(name) ]
@@ -341,7 +355,7 @@ class Diagram:
 #         maak dit af
     
     # --- Factory methods ---
-    
+        
     def create_object(self, C, name = ''):        
         # C must be a category
         if C.category != Cat:
@@ -391,7 +405,27 @@ class Diagram:
             rep.assign(f)
             self.add_representation(rep)
         return f
+    
+    def create_number(self, n):
+        # Only the global book can create numbers
+        if self.references:
+            return self.references[0].create_number(n)
         
+        # If the number was already created, just return that one
+        for x in self.morphisms:
+            if isinstance(x, Number) and x.n == n:
+                return x
+        
+        # Construct a new number with symbolic representation
+        N = Number(n)
+        rep = Repr_Symbol(str(n))
+        
+        self.add_morphism(N)
+        rep.assign(N)
+        self.add_representation(rep)
+        
+        return N
+    
     def create_composition(self, f_list):
         # There must be at least one morphism
         if not f_list:
@@ -719,7 +753,8 @@ class Theorem(Context):
         self.conclusion.add_reference(self)
         
     def try_application(self, other_diagram, mapping = {}):
-        if not self.find_mapping(other_diagram, mapping):
+        # All data must be mapped
+        if any(x not in mapping for x in self.data):
             return False
         
         # Apply conclusion

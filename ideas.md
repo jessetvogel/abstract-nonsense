@@ -278,7 +278,7 @@
 
 - ~~`f : X -> S; g : Y -> S; Z = FiberProduct(f, g) ` ??? **Very problematic!** What even is its type? Because it comes with projection maps etc.~~
 
-
+- Can add reference to diagram after objects are created already? Or just provide references on creation of diagram? That would also prevent loops!
 
 
 

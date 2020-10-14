@@ -8,3 +8,9 @@ theorem affine_implies_qcompact {
 	given X : Scheme with affine(X)
 	then qcompact(X)
 }
+
+
+theorem src_target {
+	given X, Y : Scheme
+	given f : X -> Y
+}

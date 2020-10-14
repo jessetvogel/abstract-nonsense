@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[2]:
 
 
 import re
 
 from core import *
+from prover import *
 
 
 # In[2]:
@@ -40,6 +41,7 @@ class Token:
     T_SEPARATOR = 2
     T_EOF = 3
     T_NEWLINE = 4
+    T_NUMBER = 5
     
     # identifiers:
     # keywords: id, dom, cod, cat
@@ -65,7 +67,7 @@ class Lexer():
         self.tmp_position = 0
         
     def tokenize(self, expr):
-        if expr in ['id', 'dom', 'cod', 'cat', 'let', 'assume', 'property', 'theorem', 'given', 'with', 'then', 'exists', 'whats']:
+        if expr in ['id', 'dom', 'cod', 'cat', 'let', 'assume', 'prove', 'property', 'theorem', 'given', 'with', 'then', 'exists', 'whats']:
             return Token(Token.T_KEYWORD, self.tmp_line, self.tmp_position, expr)
 
         if expr in ['(', ')', '{', '}', '=', '.', ',', ':', ';', '->', '~>', '=>']:
@@ -73,6 +75,9 @@ class Lexer():
         
         if expr in ['\n']:
             return Token(Token.T_NEWLINE, self.tmp_line, self.tmp_position)
+        
+        if re.match(r'\A\d+\Z', expr):
+            return Token(Token.T_NUMBER, self.tmp_line, self.tmp_position, expr)
         
         if re.match(r'\A\w+\Z', expr):
             return Token(Token.T_IDENTIFIER, self.tmp_line, self.tmp_position, expr)
@@ -169,7 +174,7 @@ class InterpretationError(Exception):
         self.token = token
 
 
-# In[11]:
+# In[3]:
 
 
 class Parser:
@@ -212,6 +217,7 @@ class Parser:
         #  ; |
         #  let LIST_OF_IDENTIFIERS : TYPE |
         #  assume OBJECT |
+        #  prove OBJECT |
         #  property IDENTIFIER { GIVENS CONDITIONS } |
         #  theorem IDENTIFIER { GIVENS CONDITIONS CONCLUSIONS } |
         #
@@ -244,6 +250,15 @@ class Parser:
                 raise InterpretationError('Assume requires a category!', t)
             book.create_object(C)
             return True
+        
+        if self.found(Token.T_KEYWORD, 'prove'):
+            self.consume()
+            t = self.current_token
+            C = self.parse_object(book)
+            if not C.is_category():
+                raise InterpretationError('Prove requires a category!', t)
+            prover = Prover(book, C)
+            return prover.prove()
         
         if self.found(Token.T_KEYWORD, 'property'):
             self.consume()
@@ -413,6 +428,7 @@ class Parser:
         #   dom ( OBJECT ) |
         #   cod ( OBJECT ) |
         #   cat ( OBJECT ) |
+        #   NUMBER |
         #   IDENTIFIER ( LIST_OF_OBJECTS ) |
         #   IDENTIFIER |
         #   OBJECT = OBJECT |
@@ -454,7 +470,11 @@ class Parser:
             self.consume(Token.T_SEPARATOR, '(')
             x = self.parse_object(diagram).category
             self.consume(Token.T_SEPARATOR, ')')
-            
+        
+        elif self.found(Token.T_NUMBER):
+            t_number = self.consume()
+            x = diagram.create_number(int(t_number.data))
+        
         elif self.found(Token.T_IDENTIFIER):
             t_identifier = self.consume()
             name = t_identifier.data
