@@ -26,7 +26,7 @@
 - **class** `Object extends Morphism`
   - *This class is actually not even needed by introduction of `Morphism.is_object()`*
 - **class** `Number extends Object`
-  - `int n` - the number $n \in \N​$ that it represents
+  - `int n` - the number $n \in \N$ that it represents
   - *Its category is automatically `Cat`*
 
 ### 1.2 - Representations
@@ -55,12 +55,12 @@ Question: is every morphism required to have a representation?
 ### 1.3 - Diagrams
 
 - **class** `Diagram`
-  - `Diagram(Diagram*[] references)` - references must be provided upon construction
+  - `Diagram(Diagram parent)` - references must be provided upon construction
   - `Morphisms*[] morphisms` - the morphisms that belong to this diagram
   - `Representation*[] representations` - the representations that belong to this diagram
   - `Map<string, Morphism*> symbols` - the symbols or names used to refer to certain morphisms
-  - `Diagram*[] references` - diagrams on which this diagram depends
-  - `Diagram*[] citations` - diagrams which depend on this diagram
+  - `Diagram parent` - parent diagram on which this diagram depends
+  - `Diagram children` - children diagrams which depend on this diagram
   - `void add_morphism(x)`
   - `void add_representation(rep)`
   - Lots of creation functions `create_[...]`
