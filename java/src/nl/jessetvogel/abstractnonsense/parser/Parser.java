@@ -46,7 +46,7 @@ public class Parser {
             nextToken();
             return token;
         } else {
-            throw new ParserException(currentToken, String.format("Expected %s (%s) but found %s (%s)", data, String.valueOf(type), currentToken.data, String.valueOf(currentToken.type)));
+            throw new ParserException(currentToken, String.format("Expected %s (%s) but found %s (%s)", data, type, currentToken.data, currentToken.type));
         }
     }
 
@@ -65,6 +65,7 @@ public class Parser {
                 let LIST_OF_IDENTIFIERS : TYPE |
                 assume MORPHISM |
                 prove MORPHISM |
+                apply IDENTIFIER ( LIST_OF_MORPHISMS ) |
                 property IDENTIFIER { GIVENS CONDITIONS } |
                 theorem IDENTIFIER { GIVENS CONDITIONS CONCLUSIONS } |
                 whats MORPHISM
@@ -112,7 +113,28 @@ public class Parser {
             if(!C.isCategory())
                 throw new ParserException(tProve, "Prove requires a category!");
             Prover prover = new Prover(book, C);
-            prover.prove();
+            if(prover.prove())
+                System.out.println("Proven!");
+            else
+                System.out.println("Could not prove!");
+            return;
+        }
+
+        if(found(Token.Type.KEYWORD, "apply")) {
+            consume();
+            Token tIdentifier = consume(Token.Type.IDENTIFIER);
+            String name = tIdentifier.data;
+            Theorem thm = book.getTheorem(name);
+            if(thm == null)
+                throw new ParserException(tIdentifier, "Unknown theorem " + name);
+            consume(Token.Type.SEPARATOR, "(");
+            Mapping mapping = thm.mappingFromData(book, parseListOfMorphisms(book));
+            consume(Token.Type.SEPARATOR, ")");
+
+            if(thm.tryApplication(mapping))
+                System.out.println("Theorem applied successfully");
+            else
+                System.out.println("Could not apply theorem");
             return;
         }
 
@@ -159,7 +181,6 @@ public class Parser {
         }
 
         if(found(Token.Type.KEYWORD, "debug")) {
-            consume();
 
             for(Morphism x : book.morphisms) {
                 if(x.isObject())
@@ -168,6 +189,7 @@ public class Parser {
                     System.out.printf("%s : %s %s %s%n", book.str(x), book.str(x.domain), (x.isFunctor() && !x.covariant) ? "~>" : "->", book.str(x.codomain));
             }
 
+            consume();
             return;
         }
 

@@ -1,5 +1,6 @@
 package nl.jessetvogel.abstractnonsense.core;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -37,8 +38,19 @@ public class Book extends Diagram {
         return super.getProperty(name);
     }
 
+    public Theorem getTheorem(String name) {
+        Theorem thm = theorems.get(name);
+        if(thm != null)
+            return thm;
+        return super.getTheorem(name);
+    }
+
     public boolean owns(Property property) {
         return properties.containsValue(property);
+    }
+
+    public Collection<Theorem> getTheorems() {
+        return theorems.values();
     }
 
 }

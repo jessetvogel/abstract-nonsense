@@ -4,8 +4,9 @@ public class ParserException extends Exception {
 
     Token token;
 
-    ParserException(Token t, String message) {
+    ParserException(Token token, String message) {
         super(message);
+        this.token = token;
     }
 
 }

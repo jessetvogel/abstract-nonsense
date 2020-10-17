@@ -8,10 +8,16 @@ public class Mapping {
     Diagram target;
     Map<Morphism, Morphism> mapping;
 
-    Mapping(Context context, Diagram target) {
+    public Mapping(Context context, Diagram target) {
         this.context = context;
         this.target = target;
         mapping = new HashMap<>();
+    }
+
+    public Mapping(Mapping mapping) {
+        this.context = mapping.context;
+        this.target = mapping.target;
+        this.mapping = new HashMap<>(mapping.mapping);
     }
 
     public boolean set(Morphism x, Morphism y) {
@@ -73,14 +79,12 @@ public class Mapping {
     public boolean validate() {
         // All context data must be mapped
         for(Morphism x : context.data) {
-            if(!maps(x)) {
-                System.out.println('A');
+            if(!maps(x))
                 return false;
-            }
         }
 
         // Check if all representations are well-mapped (possibly extend if not yet done)
-        Set<Map.Entry<Representation, Morphism>> rToMap = context.representations.entrySet();
+        Set<Map.Entry<Representation, Morphism>> rToMap = new HashSet<>(context.representations.entrySet());
         boolean updates = true;
         while(updates) {
             updates = false;
@@ -103,12 +107,10 @@ public class Mapping {
                 try {
                     y = target.createFromPlaceholders(rep, this);
                 } catch (CreationException e) {
-                    System.out.println('B');
                     return false;
                 }
 
                 if(!set(entry.getValue(), y)) {
-                    System.out.println('C');
                     return false;
                 }
 
@@ -122,13 +124,66 @@ public class Mapping {
         // Now, verify the conditions
         for(Morphism C : context.conditions) {
             Morphism CMapped = map(C);
-            if (!target.knowsInstance(CMapped)) {
-                System.out.println("Cannot verify condition: " + target.str(CMapped));
+            if (!target.knowsInstance(CMapped))
                 return false;
-            }
         }
 
         // Done!
         return true;
+    }
+
+    public boolean search() {
+        // Consider first datum x which is not yet mapped
+        for(Morphism x : context.data) {
+            if(maps(x)) continue;
+
+            // Find candidates y for x
+            ArrayList<Morphism> candidates = findCandidates(x);
+
+            if(candidates.isEmpty())
+                return false;
+            if(candidates.size() == 1) {
+                if (!set(x, candidates.get(0)))
+                    return false;
+                continue;
+            }
+
+            // Branch out
+            for(Morphism y : candidates) {
+                Mapping m = new Mapping(this);
+                if(!m.set(x, y))  continue;
+                if(m.search()) {
+                    mapping.putAll(m.mapping);
+                    return true;
+                }
+            }
+
+            // If none of the candidates worked, return false
+            return false;
+        }
+
+        // If all data was mapped, it is only left to validate the mapping
+        return validate();
+    }
+
+    private ArrayList<Morphism> findCandidates(Morphism x) {
+        Morphism C = map(x.category);
+        ArrayList<Morphism> candidates = new ArrayList<>();
+        boolean xIsObject = x.isObject();
+        for(Morphism y : target.morphisms) {
+            if(y.category == C && (!xIsObject || y.isObject()))
+                candidates.add(y);
+        }
+
+        if(maps(x.domain)) {
+            Morphism yDomain = map(x.domain);
+            candidates.removeIf(y -> y.domain != yDomain);
+        }
+        if(maps(x.codomain)) {
+            Morphism yCodomain = map(x.codomain);
+            candidates.removeIf(y -> y.codomain != yCodomain);
+        }
+
+        return candidates;
     }
 }

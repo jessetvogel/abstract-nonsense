@@ -61,7 +61,26 @@ public class Diagram {
         return null;
     }
 
-    boolean knowsInstance(Morphism C) {
+    public Theorem getTheorem(String name) {
+        if (hasParent())
+            return parent.getTheorem(name);
+        return null;
+    }
+
+    public ArrayList<Representation> getRepresentations(Morphism x) {
+        ArrayList<Representation> reps = new ArrayList<>();
+        for(Map.Entry<Representation, Morphism> entry : representations.entrySet()) {
+            if(entry.getValue() == x)
+                reps.add(entry.getKey());
+        }
+
+        if(hasParent() && !owns(x))
+            reps.addAll(parent.getRepresentations(x));
+
+        return reps;
+    }
+
+    public boolean knowsInstance(Morphism C) {
         // A number n has an instance precisely if n > 0
         if (C instanceof Number)
             return ((Number) C).n > 0;
@@ -79,7 +98,7 @@ public class Diagram {
         return false;
     }
 
-    boolean owns(Morphism x) {
+    public boolean owns(Morphism x) {
         return morphisms.contains(x);
     }
 
@@ -178,7 +197,7 @@ public class Diagram {
         // All morphisms must connect
         for (int i = 0; i < n; ++i) {
             if (fList.get(i).domain != fList.get(i + 1).codomain) {
-                System.out.println("Morhpisms od not connect well!");
+                System.out.println("Morphisms do not connect well!");
                 return null;
             }
         }
@@ -326,10 +345,10 @@ public class Diagram {
 
     // ------------ Stringify ------------
 
-    private String strList(ArrayList<Morphism> list) {
+    public String strList(ArrayList<Morphism> list) {
         StringBuilder s = new StringBuilder();
         for(Morphism x : list)
-            s.append(str(x)).append(".");
+            s.append(str(x)).append(",");
         s.deleteCharAt(s.length() - 1);
         return s.toString();
     }

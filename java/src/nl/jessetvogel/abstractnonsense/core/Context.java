@@ -18,6 +18,8 @@ public class Context extends Diagram {
 
     public void addCondition(Morphism x) {
         conditions.add(x);
+        // Automatically add a proof of condition to the context
+        addMorphism(createObject(x));
     }
 
     public boolean isData(Morphism x) {
@@ -25,19 +27,24 @@ public class Context extends Diagram {
     }
 
     public boolean validateData(Diagram target, ArrayList<Morphism> targetData) {
+        Mapping mapping = mappingFromData(target, targetData);
+        if(mapping == null)
+            return false;
+        return mapping.validate();
+    }
+
+    public Mapping mappingFromData(Diagram target, ArrayList<Morphism> targetData) {
         // Amount of data must match
         if (targetData.size() != data.size())
-            return false;
+            return null;
 
         // Create Mapping from otherData
         Mapping mapping = new Mapping(this, target);
         for (int i = 0; i < data.size(); ++i) {
             if(!mapping.set(data.get(i), targetData.get(i)))
-                return false;
+                return null;
         }
 
-        return mapping.validate();
+        return mapping;
     }
-
-
 }

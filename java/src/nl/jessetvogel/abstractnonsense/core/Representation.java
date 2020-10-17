@@ -5,16 +5,16 @@ import java.util.Objects;
 
 public class Representation {
 
-    enum Type {
+    public enum Type {
         COMPOSITION,
         FUNCTOR_APPLICATION,
         PROPERTY_APPLICATION,
         EQUALITY
     }
 
-    Type type;
-    Property property;
-    ArrayList<Morphism> data;
+    public Type type;
+    public Property property;
+    public ArrayList<Morphism> data;
 
     Representation(Type type, ArrayList<Morphism> data) {
         this.type = type;

@@ -1,0 +1,36 @@
+# Define rings, schemes and topological spaces
+let Ring, Scheme, Top : Cat
+
+# Define functors
+let Spec : Ring ~> Scheme
+let top : Scheme -> Top
+
+# Define scheme properties
+property affine { given X : Scheme }
+property qcompact { given X : Scheme }
+property regular { given X : Scheme }
+property noetherian { given X : Scheme }
+property locally_noetherian { given X : Scheme }
+property integral { given X : Scheme }
+property reduced { given X : Scheme }
+property irreducible { given X : Scheme }
+property cohen_macaulay { given X : Scheme }
+
+
+property m_affine { given X, Y : Scheme given f : X -> Y }
+
+# Define topological properties
+property connected { given X : Top }
+
+# Define theorems
+theorem T0 { given X : Scheme with affine(X) then qcompact(X) }
+theorem T1 { given X : Scheme with regular(X) then locally_noetherian(X) }
+theorem T2 { given X : Scheme with locally_noetherian(X) with qcompact(X) then noetherian(X) }
+theorem T3 { given X : Scheme with noetherian(X) then locally_noetherian(X) then qcompact(X) }
+theorem T4 { given X : Scheme with integral(X) then reduced(X) then irreducible(X) }
+theorem T5 { given X : Scheme with reduced(X) with irreducible(X) then integral(X) }
+theorem T6 { given X : Scheme with regular(X) then cohen_macaulay(X) }
+theorem T7 { given X : Scheme with integral(X) then connected(top(X)) }
+
+
+theorem T8 { given X, Y : Scheme given f : X -> Y with m_affine(X, Y, f) with affine(Y) then affine(X) }
