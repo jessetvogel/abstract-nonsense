@@ -8,8 +8,7 @@ public class Representation {
     public enum Type {
         COMPOSITION,
         FUNCTOR_APPLICATION,
-        PROPERTY_APPLICATION,
-        EQUALITY
+        PROPERTY_APPLICATION
     }
 
     public Type type;

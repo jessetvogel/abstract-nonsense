@@ -66,7 +66,7 @@ public class Parser {
                 assume MORPHISM |
                 prove MORPHISM |
                 apply IDENTIFIER ( LIST_OF_MORPHISMS ) |
-                property IDENTIFIER { GIVENS CONDITIONS } |
+                property IDENTIFIER { GIVENS } |
                 theorem IDENTIFIER { GIVENS CONDITIONS CONCLUSIONS } |
                 whats MORPHISM
          */
@@ -112,8 +112,8 @@ public class Parser {
             Morphism C = parseMorphism(book);
             if(!C.isCategory())
                 throw new ParserException(tProve, "Prove requires a category!");
-            Prover prover = new Prover(book, C);
-            if(prover.prove())
+            Prover prover = new Prover(book);
+            if(prover.prove(C))
                 System.out.println("Proven!");
             else
                 System.out.println("Could not prove!");
@@ -131,10 +131,14 @@ public class Parser {
             Mapping mapping = thm.mappingFromData(book, parseListOfMorphisms(book));
             consume(Token.Type.SEPARATOR, ")");
 
-            if(thm.tryApplication(mapping))
+            ArrayList<Morphism> result = thm.tryApplication(mapping);
+            if(result == null)
+                System.out.println("Could not apply theorem");
+            else if(result.isEmpty())
                 System.out.println("Theorem applied successfully");
             else
-                System.out.println("Could not apply theorem");
+                System.out.println("The following conditions must be satisfied: " + book.strList(result));
+
             return;
         }
 
@@ -147,7 +151,6 @@ public class Parser {
             Property property = new Property(book, name);
             consume(Token.Type.SEPARATOR, "{");
             parseGivens(property);
-            parseConditions(property);
             consume(Token.Type.SEPARATOR, "}");
             book.addProperty(property);
             return;
@@ -233,7 +236,7 @@ public class Parser {
         }
     }
 
-    private void parseConditions(Context context) throws ParserException, IOException, LexerException {
+    private void parseConditions(Theorem theorem) throws ParserException, IOException, LexerException {
         /*  CONDITIONS =
                 CONDITION { CONDITION }
 
@@ -244,10 +247,10 @@ public class Parser {
         while(found(Token.Type.KEYWORD, "with")) {
             consume();
             Token tCondition = currentToken;
-            Morphism C = parseMorphism(context);
+            Morphism C = parseMorphism(theorem);
             if (!C.isCategory())
                 throw new ParserException(tCondition, "Condition must be a category!");
-            context.addCondition(C);
+            theorem.addCondition(C);
         }
     }
 
@@ -341,7 +344,7 @@ public class Parser {
                 MORPHISM . MORPHISM |
                 MORPHISM => MORPHISM | TODO
                 MORPHISM & MORPHISM | TODO
-                MORPHISM + MORPHISM | TODO
+                MORPHISM | MORPHISM | TODO
                 ... more?
          */
 
@@ -428,17 +431,6 @@ public class Parser {
                 continue;
             }
 
-            if(found(Token.Type.SEPARATOR, "=")) {
-                Token tEquality = consume();
-                Morphism y = parseMorphism(diagram);
-                try {
-                    x = diagram.createEquality(x, y);
-                } catch (CreationException e) {
-                    throw new ParserException(tEquality, e.getMessage());
-                }
-                continue;
-            }
-
             if(found(Token.Type.SEPARATOR, ".")) {
                 consume();
                 Morphism y = parseMorphism(diagram);
@@ -449,7 +441,28 @@ public class Parser {
                 continue;
             }
 
-//            if(found(Token.Type.SEPARATOR, "=>")) { ... }
+            if(found(Token.Type.SEPARATOR, "&") || found(Token.Type.SEPARATOR, "|") || found(Token.Type.SEPARATOR, "=>") || found(Token.Type.SEPARATOR, "=")) {
+                Token t = consume();
+                Morphism y = parseMorphism(diagram);
+                ArrayList<Morphism> data = new ArrayList<>();
+                data.add(x);
+                data.add(y);
+                try {
+                    Property property = null;
+                    if(t.data.equals("&"))
+                        property = Global.And;
+                    if(t.data.equals("|"))
+                        property = Global.Or;
+                    if(t.data.equals("=>"))
+                        property = Global.Implies;
+                    if(t.data.equals("="))
+                        property = Global.Equals;
+                    x = diagram.createPropertyApplication(property, data);
+                } catch (CreationException e) {
+                    throw new ParserException(t, e.getMessage());
+                }
+                continue;
+            }
 
             break;
         }

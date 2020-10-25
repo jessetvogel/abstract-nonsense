@@ -4,33 +4,26 @@ import java.util.*;
 
 public class Context extends Diagram {
 
-    ArrayList<Morphism> data, conditions;
+    ArrayList<Morphism> data;
 
     Context(Diagram parent) {
         super(parent);
         data = new ArrayList<>();
-        conditions = new ArrayList<>();
     }
 
     public void addData(Morphism x) {
         data.add(x);
     }
 
-    public void addCondition(Morphism x) {
-        conditions.add(x);
-        // Automatically add a proof of condition to the context
-        addMorphism(createObject(x));
-    }
-
     public boolean isData(Morphism x) {
         return data.contains(x);
     }
 
-    public boolean validateData(Diagram target, ArrayList<Morphism> targetData) {
+    public boolean isValidData(Diagram target, ArrayList<Morphism> targetData) {
         Mapping mapping = mappingFromData(target, targetData);
         if(mapping == null)
             return false;
-        return mapping.validate();
+        return mapping.isValid();
     }
 
     public Mapping mappingFromData(Diagram target, ArrayList<Morphism> targetData) {

@@ -34,3 +34,15 @@ theorem T7 { given X : Scheme with integral(X) then connected(top(X)) }
 
 
 theorem T8 { given X, Y : Scheme given f : X -> Y with m_affine(X, Y, f) with affine(Y) then affine(X) }
+
+
+
+
+let X : Scheme
+assume affine(X)
+prove qcompact(X)
+
+let Y : Scheme
+assume regular(Y)
+assume affine(Y)
+prove noetherian(Y)

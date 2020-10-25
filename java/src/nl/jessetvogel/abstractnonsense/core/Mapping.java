@@ -5,7 +5,7 @@ import java.util.*;
 public class Mapping {
 
     Context context;
-    Diagram target;
+    public Diagram target;
     Map<Morphism, Morphism> mapping;
 
     public Mapping(Context context, Diagram target) {
@@ -21,32 +21,36 @@ public class Mapping {
     }
 
     public boolean set(Morphism x, Morphism y) {
-        // Cannot clash
-        if(maps(x))
+        // If already set, not allowed to clash
+        if (maps(x))
             return map(x) == y;
 
         // Objects must map to objects
-        if(x.isObject() && !y.isObject())
+        if (x.isObject() && !y.isObject())
             return false;
+
+        // TODO: categories must match!!
 
         mapping.put(x, y);
 
         // Induced mapping for category, domain, codomain (that is, if they need to be mapped)
-        if(context.owns(x.category) && !set(x.category, y.category))
+        if (context.owns(x.category) ? !set(x.category, y.category) : (x.category != y.category))
             return false;
 
-        if(!x.isObject()) {
-            if (context.owns(x.domain) && !set(x.domain, y.domain))
+        if (!x.isObject()) {
+            if (context.owns(x.domain) ? !set(x.domain, y.domain) : x.domain != y.domain)
                 return false;
-            if (context.owns(x.codomain) && !set(x.codomain, y.codomain))
+            if (context.owns(x.codomain) ? !set(x.codomain, y.codomain) : x.codomain != y.codomain)
                 return false;
         }
 
-        // If x is data, stop here. TODO: maybe already map everything that depends on what is currently mapped
-        if(context.isData(x))
+        // If x is data, stop here.
+        if (context.isData(x))
             return true;
 
         // TODO: CAN DO MORE HERE ALREADY
+        // TODO: maybe already map everything that depends on what is currently mapped
+
         return true;
     }
 
@@ -55,43 +59,42 @@ public class Mapping {
     }
 
     public boolean mapsList(ArrayList<Morphism> list) {
-        for(Morphism x : list) {
-            if(!maps(x))
+        for (Morphism x : list) {
+            if (!maps(x))
                 return false;
         }
         return true;
     }
 
     public Morphism map(Morphism x) {
-        if(mapping.containsKey(x))
+        if (mapping.containsKey(x))
             return mapping.get(x);
         return x;
     }
 
     public ArrayList<Morphism> mapList(ArrayList<Morphism> list) {
         ArrayList<Morphism> mapped = new ArrayList<>();
-        for(Morphism x : list)
+        for (Morphism x : list)
             mapped.add(map(x));
         return mapped;
     }
 
-
-    public boolean validate() {
+    public boolean isValid() {
         // All context data must be mapped
-        for(Morphism x : context.data) {
-            if(!maps(x))
+        for (Morphism x : context.data) {
+            if (!maps(x))
                 return false;
         }
 
-        // Check if all representations are well-mapped (possibly extend if not yet done)
+        // Make sure all representations are well-mapped
         Set<Map.Entry<Representation, Morphism>> rToMap = new HashSet<>(context.representations.entrySet());
         boolean updates = true;
-        while(updates) {
+        while (updates) {
             updates = false;
-            for(Iterator<Map.Entry<Representation, Morphism>> it = rToMap.iterator(); it.hasNext(); ) {
+            for (Iterator<Map.Entry<Representation, Morphism>> it = rToMap.iterator(); it.hasNext(); ) {
                 Map.Entry<Representation, Morphism> entry = it.next();
                 // If r is a representation of some datum, nothing to check
-                if(context.isData(entry.getValue())) {
+                if (context.isData(entry.getValue())) {
                     it.remove();
                     continue;
                 }
@@ -100,7 +103,7 @@ public class Mapping {
                 Representation rep = entry.getKey();
                 ArrayList<Morphism> checklist = new ArrayList<>(rep.data);
                 checklist.removeIf(x -> !context.owns(x));
-                if(!mapsList(checklist))
+                if (!mapsList(checklist))
                     continue;
 
                 Morphism y;
@@ -110,22 +113,18 @@ public class Mapping {
                     return false;
                 }
 
-                if(!set(entry.getValue(), y)) {
+                if (!set(entry.getValue(), y))
                     return false;
-                }
 
                 it.remove();
                 updates = true;
             }
         }
 
-        // At this point, everything is well-mapped!
-
-        // Now, verify the conditions
-        for(Morphism C : context.conditions) {
-            Morphism CMapped = map(C);
-            if (!target.knowsInstance(CMapped))
-                return false;
+        // At this point, everything (should be) well-mapped!
+        if (!rToMap.isEmpty()) {
+            System.err.println("WAIT, something is not right here!");
+            return false;
         }
 
         // Done!
@@ -134,25 +133,27 @@ public class Mapping {
 
     public boolean search() {
         // Consider first datum x which is not yet mapped
-        for(Morphism x : context.data) {
-            if(maps(x)) continue;
+        for (Morphism x : context.data) {
+            if (maps(x))
+                continue;
 
             // Find candidates y for x
             ArrayList<Morphism> candidates = findCandidates(x);
 
-            if(candidates.isEmpty())
+            if (candidates.isEmpty())
                 return false;
-            if(candidates.size() == 1) {
+            if (candidates.size() == 1) {
                 if (!set(x, candidates.get(0)))
                     return false;
                 continue;
             }
 
             // Branch out
-            for(Morphism y : candidates) {
+            for (Morphism y : candidates) {
                 Mapping m = new Mapping(this);
-                if(!m.set(x, y))  continue;
-                if(m.search()) {
+                if (!m.set(x, y))
+                    continue;
+                if (m.search()) {
                     mapping.putAll(m.mapping);
                     return true;
                 }
@@ -163,23 +164,23 @@ public class Mapping {
         }
 
         // If all data was mapped, it is only left to validate the mapping
-        return validate();
+        return isValid();
     }
 
     private ArrayList<Morphism> findCandidates(Morphism x) {
         Morphism C = map(x.category);
         ArrayList<Morphism> candidates = new ArrayList<>();
         boolean xIsObject = x.isObject();
-        for(Morphism y : target.morphisms) {
-            if(y.category == C && (!xIsObject || y.isObject()))
+        for (Morphism y : target.morphisms) {
+            if (y.category == C && (!xIsObject || y.isObject()))
                 candidates.add(y);
         }
 
-        if(maps(x.domain)) {
+        if (maps(x.domain)) {
             Morphism yDomain = map(x.domain);
             candidates.removeIf(y -> y.domain != yDomain);
         }
-        if(maps(x.codomain)) {
+        if (maps(x.codomain)) {
             Morphism yCodomain = map(x.codomain);
             candidates.removeIf(y -> y.codomain != yCodomain);
         }

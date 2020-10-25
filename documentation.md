@@ -85,16 +85,14 @@ Why do we want *multiple* references? Why is it not sufficient to just have 1 re
 
 - **class** `Context extends Diagram`
   - `Morphisms*[] data` - these objects are marked as the data of the context. All other morphisms must depend on the data, or on the references
-  - `Morphisms*[] conditions` - a list of categories (propositions) that the data is assumed to satisfy
   - `void add_data(x)`
-  - `void add_condition(x)`
   - `bool find_mapping(target diagram, mapping = {})` - tries to find a way to map the context to the given diagram given a partial mapping
-
 - **class** `Property extends Context`
   - `string name` - not strictly necessary, 
-
 - **class** `Theorem extends Context`
+  - `Morphisms*[] conditions` - a list of categories (propositions) that the data is assumed to satisfy
   - `Diagram conclusion`
+  - `void add_condition(x)`
   - `bool find_application(target diagram, mapping = {})` - tries to find a way to apply the theorem to the target diagram given a partial mapping
 
 ### 1.5 - Books

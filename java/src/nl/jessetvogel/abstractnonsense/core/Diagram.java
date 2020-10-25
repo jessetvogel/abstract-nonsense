@@ -243,8 +243,24 @@ public class Diagram {
             return parent.createPropertyApplication(property, data);
 
         // The data should fit in the context of the property
-        if(!property.validateData(this, data))
+        if(!property.isValidData(this, data))
             throw new CreationException("Property does not apply to the given data");
+
+        // Special cases:
+        if(property == Global.And && data.get(0) instanceof Number && data.get(1) instanceof Number)
+            return createNumber(((Number) data.get(0)).n * ((Number) data.get(1)).n);
+
+        if(property == Global.Or && data.get(0) instanceof Number && data.get(1) instanceof Number)
+            return createNumber(((Number) data.get(0)).n + ((Number) data.get(1)).n);
+
+        if(property == Global.Implies && data.get(0) instanceof Number && data.get(1) instanceof Number)
+            return createNumber((int) Math.pow(((Number) data.get(0)).n, ((Number) data.get(1)).n));
+
+        if(property == Global.Equals && data.get(0) == data.get(1))
+            return Global.True;
+
+        if(property == Global.Equals && data.get(0) instanceof Number && data.get(1) instanceof Number)
+            return ((Number) data.get(0)).n == ((Number) data.get(1)).n ? Global.True : Global.False;
 
         // Create representation
         Representation rep = new Representation(Representation.Type.PROPERTY_APPLICATION, property, data);
@@ -264,15 +280,15 @@ public class Diagram {
 
     public Morphism createFunctorApplication(Morphism F, Morphism x) throws CreationException {
         // Check if parent should create this instead
-        if(!owns(F) && !owns(x) && hasParent())
-                return parent.createFunctorApplication(F, x);
+        if (!owns(F) && !owns(x) && hasParent())
+            return parent.createFunctorApplication(F, x);
 
         // F must be a functor
-        if(!F.isFunctor())
+        if (!F.isFunctor())
             throw new CreationException("Given morphism is not a functor");
 
         // x must belong to the domain category of the functor
-        if(x.category != F.domain)
+        if (x.category != F.domain)
             throw new CreationException("Given morphism does not belong to functor domain");
 
         // Create representation
@@ -282,19 +298,18 @@ public class Diagram {
         Representation rep = new Representation(Representation.Type.FUNCTOR_APPLICATION, data);
 
         // Check if the representation already exists in the diagram, and if so, return the morphism it points to
-        if(representations.containsKey(rep))
+        if (representations.containsKey(rep))
             return representations.get(rep);
 
         // Construct new object/morphism
         Morphism Fx;
-        if(x.isObject()) {
+        if (x.isObject()) {
             Fx = new Morphism(F.codomain);
-        }
-        else {
+        } else {
             Morphism X = x.domain, Y = x.codomain;
             Morphism FX = createFunctorApplication(F, X);
             Morphism FY = createFunctorApplication(F, Y);
-            if(F.covariant)
+            if (F.covariant)
                 Fx = new Morphism(F.codomain, FX, FY);
             else
                 Fx = new Morphism(F.codomain, FY, FX);
@@ -306,40 +321,11 @@ public class Diagram {
         return Fx;
     }
 
-    public Morphism createEquality(Morphism x, Morphism y) throws CreationException {
-        // Check if parent should create this instead
-        if(!owns(x) && !owns(y) && hasParent())
-            return parent.createEquality(x, y);
-
-        // x and y must lie in the same category
-        if(x.category != y.category)
-            throw new CreationException("Objects or morphisms can only be equal if in the same category");
-
-        // Create representation
-        ArrayList<Morphism> data = new ArrayList<>();
-        data.add(x);
-        data.add(y);
-        Representation rep = new Representation(Representation.Type.EQUALITY, data);
-
-        // Check if this representation already exists somewhere!
-        if(representations.containsKey(rep))
-            return representations.get(rep);
-
-        // Construct new category
-        Morphism C = new Morphism(Cat);
-
-        // Assign, and add object and representation to the diagram
-        addMorphism(C);
-        assignRepresentation(rep, C);
-        return C;
-    }
-
     public Morphism createFromPlaceholders(Representation rep, Mapping mapping) throws CreationException {
         return switch (rep.type) {
             case COMPOSITION -> createComposition(mapping.mapList(rep.data));
             case FUNCTOR_APPLICATION -> createFunctorApplication(mapping.map(rep.data.get(0)), mapping.map(rep.data.get(1)));
             case PROPERTY_APPLICATION -> createPropertyApplication(rep.property, mapping.mapList(rep.data));
-            case EQUALITY -> createEquality(mapping.map(rep.data.get(0)), mapping.map(rep.data.get(1)));
         };
     }
 
@@ -366,7 +352,6 @@ public class Diagram {
                     case COMPOSITION -> strList(rep.data).replaceAll(",", ".");
                     case FUNCTOR_APPLICATION -> str(rep.data.get(0)) + "(" + str(rep.data.get(1)) + ")";
                     case PROPERTY_APPLICATION -> rep.property.name + "(" + strList(rep.data) + ")";
-                    case EQUALITY -> str(rep.data.get(0)) + " = " + str(rep.data.get(1));
                 };
             }
         }
