@@ -1,16 +1,19 @@
 let Ring, Scheme : Cat
 
 
-property affine { given X : Scheme }
-property qcompact { given X : Scheme }
+property affine { for X : Scheme }
+property m_affine { use X, Y : Scheme for f : X -> Y }
+property qcompact { for X : Scheme }
 
 theorem affine_implies_qcompact {
-	given X : Scheme with affine(X)
+	for X : Scheme
+	with affine(X) 
 	then qcompact(X)
 }
 
-
 theorem src_target {
-	given X, Y : Scheme
-	given f : X -> Y
+	use X, Y : Scheme
+	for f : X -> Y
+	with m_affine(f), affine(Y)
+	then affine(X)
 }

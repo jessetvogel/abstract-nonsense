@@ -123,7 +123,7 @@ public class Mapping {
 
         // At this point, everything (should be) well-mapped!
         if (!rToMap.isEmpty()) {
-            System.err.println("WAIT, something is not right here!");
+            System.err.println("(Some) representations do not depend on data!");
             return false;
         }
 
@@ -131,7 +131,7 @@ public class Mapping {
         return true;
     }
 
-    public boolean search() {
+    public void search(ArrayList<Mapping> list) {
         // Consider first datum x which is not yet mapped
         for (Morphism x : context.data) {
             if (maps(x))
@@ -141,30 +141,26 @@ public class Mapping {
             ArrayList<Morphism> candidates = findCandidates(x);
 
             if (candidates.isEmpty())
-                return false;
+                return;
             if (candidates.size() == 1) {
                 if (!set(x, candidates.get(0)))
-                    return false;
+                    return;
                 continue;
             }
 
             // Branch out
             for (Morphism y : candidates) {
                 Mapping m = new Mapping(this);
-                if (!m.set(x, y))
-                    continue;
-                if (m.search()) {
-                    mapping.putAll(m.mapping);
-                    return true;
-                }
+                if (m.set(x, y))
+                    m.search(list);
             }
 
-            // If none of the candidates worked, return false
-            return false;
+            return;
         }
 
         // If all data was mapped, it is only left to validate the mapping
-        return isValid();
+        if (isValid())
+            list.add(this);
     }
 
     private ArrayList<Morphism> findCandidates(Morphism x) {

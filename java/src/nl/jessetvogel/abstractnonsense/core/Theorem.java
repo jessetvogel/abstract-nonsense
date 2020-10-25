@@ -5,9 +5,9 @@ import java.util.*;
 
 public class Theorem extends Context {
 
-    public String name;
-    Diagram conclusion;
-    ArrayList<Morphism> conditions;
+    public final String name;
+    public final Diagram conclusion;
+    private final ArrayList<Morphism> conditions;
 
     public Theorem(Diagram parent, String name) {
         super(parent);
@@ -20,21 +20,17 @@ public class Theorem extends Context {
         conditions.add(x);
     }
 
-    public Diagram getConclusion() {
-        return conclusion;
-    }
-
-    public ArrayList<Morphism> tryApplication(Mapping mapping) {
-        // Search for mapping
-        if(!mapping.search())
+    public ArrayList<Morphism> apply(Mapping mapping) {
+        // Mapping must be valid
+        if(!mapping.isValid())
             return null;
 
         // See what conditions are already satisfied, and which are not
         ArrayList<Morphism> list = new ArrayList<>();
-        for(Morphism C : conditions) {
-            Morphism CMapped = mapping.map(C);
-            if (!mapping.target.knowsInstance(CMapped))
-                list.add(CMapped);
+        for(Morphism P : conditions) {
+            Morphism Q = mapping.map(P);
+            if (!mapping.target.knowsInstance(Q))
+                list.add(Q);
         }
 
         // If all conditions are satisfied, we apply the conclusion
@@ -72,11 +68,11 @@ public class Theorem extends Context {
         }
 
         // Finally, create objects in other_diagram for all objects that do not have a representation in the conclusion (i.e. mostly proofs of statements)
-        ArrayList<Morphism> __ = new ArrayList<>();
+        ArrayList<Morphism> __tmp__ = new ArrayList<>();
         for (Morphism x : conclusion.morphisms) {
             if (!mapping.maps(x)) {
                 Morphism C = mapping.map(x.category);
-                __.add(C);
+                __tmp__.add(C);
                 Morphism y;
                 if (x.isObject())
                     y = mapping.target.createObject(C);
@@ -88,7 +84,7 @@ public class Theorem extends Context {
             }
         }
 
-        System.out.println("Apply Theorem " + name + " to (" + mapping.target.strList(mapping.mapList(data)) + ") to conclude " + mapping.target.strList(__));
+        System.out.println("Apply Theorem " + name + " to (" + mapping.target.strList(mapping.mapList(data)) + ") to conclude " + mapping.target.strList(__tmp__));
         return true;
     }
 }

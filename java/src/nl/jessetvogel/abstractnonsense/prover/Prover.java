@@ -17,13 +17,13 @@ public class Prover {
         queue = new LinkedTransferQueue<>();
     }
 
-    public boolean prove(Morphism P) {
+    public boolean prove(Morphism P, int money) {
         // P must be a category
         if (!P.isCategory())
             return false;
 
         // Create goal for P
-        Goal finalGoal = goalFromProp(P);
+        Goal finalGoal = createGoal(P, money);
         queue.add(finalGoal);
 
         // As long as the final goal is not proven, and the queue is non-empty, try to prove goals
@@ -42,7 +42,7 @@ public class Prover {
     }
 
     public void considerGoal(Goal goal) {
-//        System.out.println("We consider the goal " + diagram.str(goal.P));
+        System.out.println("[We consider the goal " + diagram.str(goal.P) + " with money = " + String.valueOf(goal.money) + "]");
 
         // If we already know a proof, resolve the goal
         if (diagram.knowsInstance(goal.P)) {
@@ -50,29 +50,36 @@ public class Prover {
             return;
         }
 
+        // If there is no money left, stop
+        if(goal.money == 0)
+            return;
+
         // Find applicable theorems
         Book book = (Book) diagram;
         ArrayList<Representation> repsP = diagram.getRepresentations(goal.P);
         for (Theorem thm : book.getTheorems()) {
-            Diagram conclusion = thm.getConclusion();
-            for (Morphism x : conclusion.morphisms) {
+            if(goal.isProven())
+                return;
+            for (Morphism x : thm.conclusion.morphisms) {
+                if(goal.isProven())
+                    return;
+
                 // x MUST BE AN OBJECT
                 if (!x.isObject())
                     continue;
 
-                //QUESTION: IS THERE ANY WAY THAT x.category WILL EQUAL P WHEN APPLYING THE THEOREM ??
+                // QUESTION: IS THERE ANY WAY THAT x.category WILL EQUAL P WHEN APPLYING THE THEOREM ??
                 Morphism C = x.category;
 
                 // IF x.category == P ALREADY, THEN YES (with no conditions)
                 if (C == goal.P) {
                     Mapping mapping = new Mapping(thm, diagram);
-                    if(considerTheoremApplication(goal, thm, mapping))
-                        return;
+                    considerTheoremPartialMapping(goal, thm, mapping);
                     continue;
                 }
 
                 // IF x.category IS OWNED BY THE CONCLUSION (I.E. IT WILL DEPEND ON SOMETHING 'THAT EXISTS'), NO MAPPING WILL BE POSSIBLE
-                if (conclusion.owns(C))
+                if (thm.conclusion.owns(C))
                     continue;
 
                 // IF x.category DOES NOT BELONG TO THE THEOREM (CONTEXT), THEN NO (otherwise x.category should equal P already)
@@ -82,10 +89,8 @@ public class Prover {
                 // WELL, IF x.category IS DATA, THEN YES (with condition x.category -> P)
                 if (thm.isData(C)) {
                     Mapping mapping = new Mapping(thm, diagram);
-                    if (!mapping.set(C, goal.P))
-                        continue;
-                    if(considerTheoremApplication(goal, thm, mapping))
-                        return;
+                    if (mapping.set(C, goal.P))
+                        considerTheoremPartialMapping(goal, thm, mapping);
                     continue;
                 }
 
@@ -94,34 +99,53 @@ public class Prover {
                 for (Representation rC : repsC) {
                     for (Representation rP : repsP) {
                         Mapping mapping = mappingFromRepresentations(thm, rC, rP);
-                        if(mapping != null && considerTheoremApplication(goal, thm, mapping))
-                            return;
+                        if(mapping != null)
+                            considerTheoremPartialMapping(goal, thm, mapping);
                     }
                 }
             }
         }
     }
 
-    private boolean considerTheoremApplication(Goal goal, Theorem thm, Mapping mapping) {
+    private void considerTheoremPartialMapping(Goal goal, Theorem thm, Mapping mapping) {
+        // Search for possible mappings, and consider them all
+        ArrayList<Mapping> mappings = new ArrayList<>();
+        mapping.search(mappings);
+        for(Mapping m : mappings)
+            considerTheorem(goal, thm, m);
+    }
+
+    private void considerTheorem(Goal goal, Theorem thm, Mapping mapping) {
         // Try to apply the theorem using mapping
-        ArrayList<Morphism> result = thm.tryApplication(mapping);
+        ArrayList<Morphism> result = thm.apply(mapping);
         // If it cannot be applied, stop
         if(result == null)
-            return false;
+            return;
         // If it was applied (no more conditions), immediately set goal to proven
         if(result.isEmpty()) {
             goal.setProven();
-            return true;
+            return;
         }
-        // Create an Implication with the goal and the remaining conditions
+
+        // Money for conditions (one less than of goal)
+        int money = goal.money - 1; // TODO: maybe change to thm.cost at some point..
+
+        // Create goals for the remaining conditions
         ArrayList<Goal> conditions = new ArrayList<>();
         for(Morphism P : result) {
-            Goal g = goalFromProp(P);
+            Goal g = getGoal(P);
+            if(g == null)
+                g = createGoal(P, money);
+            else if (g.money >= money)
+                return;
+            else
+                g.money = money;
             conditions.add(g);
-            queue.add(g);
         }
+
+        // Create Implication, and add goals to the queue
         new Implication(goal, conditions);
-        return false;
+        queue.addAll(conditions);
     }
 
     private Mapping mappingFromRepresentations(Context context, Representation r, Representation s) {
@@ -141,31 +165,27 @@ public class Prover {
         return mapping;
     }
 
-    private Goal goalFromProp(Morphism P) {
-        Goal goal = goals.get(P);
-        if (goal == null) {
-            goal = new Goal(P);
-            goals.put(P, goal);
-        }
+    private Goal getGoal(Morphism P) {
+        return goals.get(P);
+    }
+
+    private Goal createGoal(Morphism P, int money) {
+        Goal goal = new Goal(P, money);
+        goals.put(P, goal);
         return goal;
     }
 
     private static class Goal {
 
-        enum Status {
-            UNDECIDED,
-            SEARCHED,
-            PROVEN,
-            FAILED
-        }
-
         public final Morphism P;
-        public Status status;
+        private int money;
+        private boolean proven;
         private final ArrayList<Implication> usedFor;
 
-        Goal(Morphism P) {
+        Goal(Morphism P, int money) {
             this.P = P;
-            status = Status.UNDECIDED;
+            this.money = money;
+            proven = false;
             usedFor = new ArrayList<>();
         }
 
@@ -174,20 +194,20 @@ public class Prover {
         }
 
         public boolean isProven() {
-            return status == Status.PROVEN;
+            return proven;
         }
 
         public void setProven() {
-            if (status == Status.PROVEN) // Prevents recursion
+            if (proven) // Prevents recursion
                 return;
-            status = Status.PROVEN;
+            proven = true;
             for (Implication I : usedFor)
                 I.removeCondition(this);
             usedFor.clear();
         }
     }
 
-    private static class Implication {
+    private class Implication {
 
         final Goal goal;
         final ArrayList<Goal> conditions;
@@ -201,9 +221,10 @@ public class Prover {
 
         public void removeCondition(Goal g) {
             conditions.remove(g);
-            if (conditions.isEmpty())
+            if (conditions.isEmpty()) {
                 goal.setProven();
+                diagram.createObject(goal.P); // TODO: where to do this?
+            }
         }
-
     }
 }

@@ -26,6 +26,22 @@ public class Context extends Diagram {
         return mapping.isValid();
     }
 
+    public boolean isReduced() {
+        // Reduced means that every morphism in the context depends on the data
+        // An easy check to see if is the case is to try to map the context to itself
+        Mapping mapping = mappingFromData(this, data);
+        if(mapping == null || !mapping.isValid()) {
+            System.err.println("Hmm, this should not happen!");
+            return false;
+        }
+        // Now all objects should be mapped
+        for(Morphism x : morphisms) {
+            if(!mapping.maps(x))
+                return false;
+        }
+        return true;
+    }
+
     public Mapping mappingFromData(Diagram target, ArrayList<Morphism> targetData) {
         // Amount of data must match
         if (targetData.size() != data.size())

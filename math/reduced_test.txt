@@ -1,0 +1,10 @@
+let C : Cat;
+
+property P { for x : C }
+property Q { for x : C }
+
+theorem thm { for y : C then Q(y) }
+
+let z : C
+
+prove Q(z);

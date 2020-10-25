@@ -107,17 +107,19 @@ Why do we want *multiple* references? Why is it not sufficient to just have 1 re
 
 ## Chapter 2 - Grammar and Parsers
 
-- `let X : C` creates an object (by assumption) in the category `C`, and names it `'X'` 
+- `let` | Creates an object (by assumption) in the category `C`, and names it `'X'` 
 
-- `property`
+- `assume` | Does the same as `let`, but does not associate a symbol to the object
 
-- `theorem`
+- `property` | Defines a property, `property { use [...] for [...] }`
 
-- `example`
+- `theorem` | Defines a theorem, `theorem { use [...] for [...] with [...] then [...] }`
 
-- `assume`
+- `example` | TODO
 
-- `prove`
+- `apply` | Tries to apply a given theorem to some given data
+
+- `prove` | Tries to prove a given statement. That is, it tries to find an object of a given category.
 
   
 
