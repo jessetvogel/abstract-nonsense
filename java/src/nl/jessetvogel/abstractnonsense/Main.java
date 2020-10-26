@@ -42,9 +42,10 @@ public class Main {
 
             Global.Equals = new Property(Global.book, "=");
             Morphism C = Global.Equals.createObject(Global.Cat);
-            Global.Equals.addData(Global.Equals.createObject(C));
-            Global.Equals.addData(Global.Equals.createObject(C));
-            Global.book.addProperty(Global.And);
+            Morphism x = Global.Equals.createObject(C), y = Global.Equals.createObject(C), z = Global.Equals.createObject(C), w = Global.Equals.createObject(C);
+            Global.Equals.addData(Global.Equals.createMorphism(x, y, true));
+            Global.Equals.addData(Global.Equals.createMorphism(z, w, true));
+            Global.book.addProperty(Global.Equals);
         }
 
         // Parse input

@@ -1,10 +1,8 @@
 ##### How to set two elements equal in a diagram?
 
-- Whenever you want to set two objects equal, first figure out which diagrams they belong to, and start with the 'youngest' diagram of the two. Let $x$ denote the 'oldest' object, and $y​$ the 'youngest'.
-
+- Whenever you want to set two objects equal, first figure out which diagrams they belong to, and start with the 'youngest' diagram of the two. Let $x$ denote the 'oldest' object, and $y$ the 'youngest'.
+- If $x$ and $y$ are already equal, return
 - `Diagram::set_equal(x, y, induced_equalities = [ triples (diagram, x, y) ])` - Now the goal is to replace $y$ with $x$ everywhere. 
-
-  1. If $x$ and $y​$ are already equal, return
   2. **If $y$ in self.conditions, replace by $x$, what about theorems and conclusions???**
   3. For each representation: `for r in ... : ...`
      1. if it points to $y$, let it point to $x$ instead.

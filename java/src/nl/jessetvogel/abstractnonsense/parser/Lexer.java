@@ -6,10 +6,11 @@ import java.util.regex.Pattern;
 
 public class Lexer {
 
-    public static final List<String> KEYWORDS = List.of("exit", "id", "dom", "cod", "cat", "let", "assume", "prove", "apply", "property", "theorem", "use", "for", "with", "then", "exists", "whats", "debug");
+    public static final List<String> KEYWORDS = List.of("equalities", "exit", "import", "id", "dom", "cod", "cat", "let", "assume", "prove", "apply", "property", "theorem", "use", "for", "with", "then", "exists", "whats", "debug");
     public static final List<String> SEPARATORS = List.of("(", ")", "{", "}", "=", ".", ",", ":", "->", "~>", "=>", "&", "|", ";");
     public static final Pattern PATTERN_NUMBERS = Pattern.compile("^\\d+$");
     public static final Pattern PATTERN_IDENTIFIERS = Pattern.compile("^\\w+$");
+    public static final Pattern PATTERN_STRING = Pattern.compile("^\"[^\"]*\"$");
 
     Scanner scanner;
 
@@ -32,6 +33,8 @@ public class Lexer {
             return new Token(tmpLine, tmpPosition, Token.Type.NUMBER, str);
         if(PATTERN_IDENTIFIERS.matcher(str).matches())
             return new Token(tmpLine, tmpPosition, Token.Type.IDENTIFIER, str);
+        if(PATTERN_STRING.matcher(str).matches())
+            return new Token(tmpLine, tmpPosition, Token.Type.STRING, str.substring(1, str.length() - 1));
 
         return null;
     }
@@ -68,7 +71,7 @@ public class Lexer {
                 return token;
             }
 
-            // Comments: marks the end of a token ( if there currently is one),
+            // Comments: mark the end of a token (if there currently is one),
             // then continue discarding characters until a newline appears
             if(c.equals('#')) {
                 Token token = null;
@@ -78,9 +81,11 @@ public class Lexer {
                     token = currentToken;
                 }
 
-                while(!scanner.get().equals('\n'));
+                do {
+                    c = scanner.get();
+                } while (c != null && !c.equals('\n'));
 
-                tmp = "\n";
+                tmp = (c == null ? "" : String.valueOf(c));
                 tmpLine = scanner.line;
                 tmpPosition = scanner.position;
                 currentToken = tokenize(tmp);

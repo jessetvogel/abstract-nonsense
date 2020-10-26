@@ -1,9 +1,7 @@
 package nl.jessetvogel.abstractnonsense.core;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.lang.reflect.Array;
+import java.util.*;
 
 import static nl.jessetvogel.abstractnonsense.core.Global.Cat;
 
@@ -48,9 +46,9 @@ public class Diagram {
     }
 
     public Morphism getMorphism(String name) {
-        if(hasSymbol(name))
+        if (hasSymbol(name))
             return symbols.get(name);
-        if(hasParent())
+        if (hasParent())
             return parent.getMorphism(name);
         return null;
     }
@@ -69,12 +67,12 @@ public class Diagram {
 
     public ArrayList<Representation> getRepresentations(Morphism x) {
         ArrayList<Representation> reps = new ArrayList<>();
-        for(Map.Entry<Representation, Morphism> entry : representations.entrySet()) {
-            if(entry.getValue() == x)
+        for (Map.Entry<Representation, Morphism> entry : representations.entrySet()) {
+            if (entry.getValue() == x)
                 reps.add(entry.getKey());
         }
 
-        if(hasParent() && !owns(x))
+        if (hasParent() && !owns(x))
             reps.addAll(parent.getRepresentations(x));
 
         return reps;
@@ -82,8 +80,8 @@ public class Diagram {
 
     public boolean knowsInstance(Morphism C) {
         // A number n has an instance precisely if n > 0
-        if (C instanceof Number)
-            return ((Number) C).n > 0;
+        if (C instanceof Number && ((Number) C).n > 0)
+            return true;
 
         // Check if it has an instance itself
         for (Morphism x : morphisms) {
@@ -103,8 +101,8 @@ public class Diagram {
     }
 
     private boolean ownsSomething(ArrayList<Morphism> list) {
-        for(Morphism x : list) {
-            if(owns(x))
+        for (Morphism x : list) {
+            if (owns(x))
                 return true;
         }
         return false;
@@ -168,7 +166,7 @@ public class Diagram {
         // If the number was already created, just return that one
         String strN = String.valueOf(n);
 
-        if(hasSymbol(strN))
+        if (hasSymbol(strN))
             return (Number) getMorphism(strN);
 
         // Construct a new number with symbolic representation
@@ -180,7 +178,7 @@ public class Diagram {
 
     public Morphism createComposition(ArrayList<Morphism> fList) {
         // Check if parent should create this instead
-        if(hasParent() && !ownsSomething(fList))
+        if (hasParent() && !ownsSomething(fList))
             return parent.createComposition(fList);
 
         // There must be at least one morphism
@@ -219,15 +217,15 @@ public class Diagram {
 
         // Check if the representation already exists in the diagram, and if so, return the morphism it points to
         Morphism g = representations.get(rep);
-        if(g != null)
+        if (g != null)
             return g;
 
         // Construct new object/morphism
         g = new Morphism(X.category, X, Y);
 
         // If we are talking about functors, determine whether the resulting functor is covariant or contravariant
-        if(g.isFunctor()) {
-            for(Morphism f : fList)
+        if (g.isFunctor()) {
+            for (Morphism f : fList)
                 g.covariant ^= f.covariant;
         }
 
@@ -239,34 +237,34 @@ public class Diagram {
 
     public Morphism createPropertyApplication(Property property, ArrayList<Morphism> data) throws CreationException {
         // Check if parent should create this instead
-        if(hasParent() && !owns(property) && !ownsSomething(data))
+        if (hasParent() && !owns(property) && !ownsSomething(data))
             return parent.createPropertyApplication(property, data);
 
         // The data should fit in the context of the property
-        if(!property.isValidData(this, data))
+        if (!property.isValidData(this, data))
             throw new CreationException("Property does not apply to the given data");
 
         // Special cases:
-        if(property == Global.And && data.get(0) instanceof Number && data.get(1) instanceof Number)
+        if (property == Global.And && data.get(0) instanceof Number && data.get(1) instanceof Number)
             return createNumber(((Number) data.get(0)).n * ((Number) data.get(1)).n);
 
-        if(property == Global.Or && data.get(0) instanceof Number && data.get(1) instanceof Number)
+        if (property == Global.Or && data.get(0) instanceof Number && data.get(1) instanceof Number)
             return createNumber(((Number) data.get(0)).n + ((Number) data.get(1)).n);
 
-        if(property == Global.Implies && data.get(0) instanceof Number && data.get(1) instanceof Number)
+        if (property == Global.Implies && data.get(0) instanceof Number && data.get(1) instanceof Number)
             return createNumber((int) Math.pow(((Number) data.get(0)).n, ((Number) data.get(1)).n));
 
-        if(property == Global.Equals && data.get(0) == data.get(1))
+        if (property == Global.Equals && data.get(0) == data.get(1))
             return Global.True;
 
-        if(property == Global.Equals && data.get(0) instanceof Number && data.get(1) instanceof Number)
+        if (property == Global.Equals && data.get(0) instanceof Number && data.get(1) instanceof Number)
             return ((Number) data.get(0)).n == ((Number) data.get(1)).n ? Global.True : Global.False;
 
         // Create representation
         Representation rep = new Representation(Representation.Type.PROPERTY_APPLICATION, property, data);
 
         // Check if this representation already exists somewhere!
-        if(representations.containsKey(rep))
+        if (representations.containsKey(rep))
             return representations.get(rep);
 
         // Construct new category
@@ -321,6 +319,14 @@ public class Diagram {
         return Fx;
     }
 
+    private Morphism createFromRepresentation(Representation rep) throws CreationException {
+        return switch (rep.type) {
+            case COMPOSITION -> createComposition(rep.data);
+            case FUNCTOR_APPLICATION -> createFunctorApplication(rep.data.get(0), rep.data.get(1));
+            case PROPERTY_APPLICATION -> createPropertyApplication(rep.property, rep.data);
+        };
+    }
+
     public Morphism createFromPlaceholders(Representation rep, Mapping mapping) throws CreationException {
         return switch (rep.type) {
             case COMPOSITION -> createComposition(mapping.mapList(rep.data));
@@ -329,23 +335,112 @@ public class Diagram {
         };
     }
 
+    public void resolveEqualities() throws CreationException {
+        for (Map.Entry<Representation, Morphism> entry : representations.entrySet()) {
+            Representation rep = entry.getKey();
+            if (rep.property != Global.Equals)
+                continue;
+
+            if (knowsInstance(entry.getValue()))
+                setEqual(rep.data.get(0), rep.data.get(1));
+        }
+    }
+
+    public void setEqual(Morphism x, Morphism y) throws CreationException {
+        // If do not own x nor y, then parent should set them equal
+        if (!owns(x) && !owns(y)) {
+            if (hasParent()) {
+                parent.setEqual(x, y);
+                return;
+            }
+            System.err.println("Oops, this should not be happening...");
+        }
+
+        // If x and y are already equal, there is nothing to do
+        if (x == y)
+            return;
+
+        // If either x or y is not an object, first their domain and codomain must match
+        if(!x.isObject() || !y.isObject()) {
+            setEqual(x.domain, y.domain);
+            setEqual(x.codomain, y.codomain);
+        }
+
+        // Idea is to replace x with y, so make sure that this diagram owns x
+        if (!owns(x)) {
+            Morphism z = y;
+            y = x;
+            x = z;
+        }
+
+        // Now we replace x with y
+        List<InducedEquality> induced = new ArrayList<>();
+        replaceMorphism(x, y, induced);
+
+        // At this point, nothing references x anymore in this diagram or its children.
+
+        // Delete x
+        morphisms.remove(x);
+
+        // Continue with possible induced equalities
+        for (InducedEquality e : induced)
+            e.diagram.setEqual(e.x, e.y);
+    }
+
+    private void replaceMorphism(Morphism x, Morphism y, List<InducedEquality> induced) throws CreationException {
+        // Replace categories, domains and codomains
+        for (Morphism z : morphisms) {
+            if (z.category == x) z.category = y;
+            if (z.domain == x) z.domain = y;
+            if (z.codomain == x) z.codomain = y;
+        }
+
+        // Replace symbol pointers
+        for (Map.Entry<String, Morphism> entry : symbols.entrySet()) {
+            if (entry.getValue() == x)
+                entry.setValue(y);
+        }
+
+        // Replace representation pointers
+        for (Map.Entry<Representation, Morphism> entry : representations.entrySet()) {
+            if (entry.getValue() == x)
+                entry.setValue(y);
+        }
+
+        // Replace representations containing x as data
+        for (Iterator<Map.Entry<Representation, Morphism>> it = representations.entrySet().iterator(); it.hasNext(); ) {
+            Map.Entry<Representation, Morphism> entry = it.next();
+            Representation rep = entry.getKey();
+            if (rep.data.contains(x)) {
+                it.remove();
+                rep.data.replaceAll(z -> (z == x ? y : z));
+                Morphism z = createFromRepresentation(rep);
+                induced.add(new InducedEquality(this, entry.getValue(), z));
+            }
+        }
+
+        // Apply to children
+        for (Diagram child : children)
+            child.replaceMorphism(x, y, induced);
+    }
+
     // ------------ Stringify ------------
 
     public String strList(ArrayList<Morphism> list) {
         StringBuilder s = new StringBuilder();
-        for(Morphism x : list)
+        for (Morphism x : list)
             s.append(str(x)).append(",");
         s.deleteCharAt(s.length() - 1);
         return s.toString();
     }
 
     public String str(Morphism x) {
-        for(Map.Entry<String, Morphism> entry : symbols.entrySet()) {
-            if(entry.getValue() == x)
+        for (Map.Entry<String, Morphism> entry : symbols.entrySet()) {
+            if (entry.getValue() == x)
                 return entry.getKey();
         }
 
-        for(Map.Entry<Representation, Morphism> entry : representations.entrySet()) {
+        for (Map.Entry<Representation, Morphism> entry : representations.entrySet()) {
             if (entry.getValue() == x) {
                 Representation rep = entry.getKey();
                 return switch (rep.type) {
@@ -356,9 +451,21 @@ public class Diagram {
             }
         }
 
-        if(hasParent() && !owns(x))
+        if (hasParent() && !owns(x))
             return parent.str(x);
 
         return "?";
+    }
+
+    private class InducedEquality {
+
+        final Diagram diagram;
+        final Morphism x, y;
+
+        InducedEquality(Diagram diagram, Morphism x, Morphism y) {
+            this.diagram = diagram;
+            this.x = x;
+            this.y = y;
+        }
     }
 }

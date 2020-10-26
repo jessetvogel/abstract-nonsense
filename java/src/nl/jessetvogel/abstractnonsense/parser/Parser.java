@@ -3,8 +3,10 @@ package nl.jessetvogel.abstractnonsense.parser;
 import nl.jessetvogel.abstractnonsense.core.*;
 import nl.jessetvogel.abstractnonsense.prover.Prover;
 
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 
 public class Parser {
 
@@ -64,8 +66,9 @@ public class Parser {
         /* STATEMENT =
                 ; |
                 exit |
+                import STRING |
                 let LIST_OF_IDENTIFIERS : TYPE |
-                assume MORPHISM |
+                assume LIST_OF_MORPHISMS |
                 prove MORPHISM |
                 apply IDENTIFIER ( LIST_OF_MORPHISMS ) |
                 property IDENTIFIER { IMPLICITS GIVENS } |
@@ -78,9 +81,28 @@ public class Parser {
             return;
         }
 
+        if(found(Token.Type.KEYWORD, "equalities")) {
+            consume();
+            try {
+                book.resolveEqualities();
+            } catch (CreationException e) {
+                e.printStackTrace();
+            }
+            return;
+        }
+
         if (found(Token.Type.KEYWORD, "exit")) {
             consume();
             System.exit(0);
+            return;
+        }
+
+        if(found(Token.Type.KEYWORD, "import")) {
+            consume();
+            String path = consume(Token.Type.STRING).data;
+            Scanner scanner = new Scanner(new FileInputStream(path));
+            Lexer lexer = new Lexer(scanner);
+            (new Parser(lexer, book)).parse();
             return;
         }
 
@@ -106,10 +128,12 @@ public class Parser {
         if (found(Token.Type.KEYWORD, "assume")) {
             consume();
             Token tAssume = currentToken;
-            Morphism C = parseMorphism(book);
-            if (!C.isCategory())
-                throw new ParserException(tAssume, "Assume requires a category");
-            book.createObject(C);
+            List<Morphism> list = parseListOfMorphisms(book);
+            for(Morphism P : list) {
+                if (!P.isCategory())
+                    throw new ParserException(tAssume, "Assume requires a category");
+                book.createObject(P);
+            }
             return;
         }
 

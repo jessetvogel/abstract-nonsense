@@ -29,7 +29,9 @@ public class Mapping {
         if (x.isObject() && !y.isObject())
             return false;
 
-        // TODO: categories must match!!
+        // Covariant morphisms must map to covariant morphisms
+        if (x.covariant != y.covariant)
+            return false;
 
         mapping.put(x, y);
 
@@ -168,7 +170,7 @@ public class Mapping {
         ArrayList<Morphism> candidates = new ArrayList<>();
         boolean xIsObject = x.isObject();
         for (Morphism y : target.morphisms) {
-            if (y.category == C && (!xIsObject || y.isObject()))
+            if (y.category == C && (!xIsObject || y.isObject()) && y.covariant == x.covariant)
                 candidates.add(y);
         }
 

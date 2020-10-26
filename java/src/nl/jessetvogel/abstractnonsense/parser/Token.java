@@ -8,7 +8,8 @@ public class Token {
         SEPARATOR,
         EOF,
         NEWLINE,
-        NUMBER
+        NUMBER,
+        STRING
     }
 
     Type type;

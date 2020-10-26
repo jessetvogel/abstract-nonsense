@@ -17,7 +17,6 @@ property irreducible { for X : Scheme }
 property cohen_macaulay { for X : Scheme }
 
 
-
 property etale { use X, Y : Scheme for f : X -> Y }
 property m_affine { use X, Y : Scheme for f : X -> Y }
 
