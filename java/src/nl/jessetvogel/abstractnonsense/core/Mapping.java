@@ -60,7 +60,7 @@ public class Mapping {
         return mapping.containsKey(x);
     }
 
-    public boolean mapsList(ArrayList<Morphism> list) {
+    public boolean mapsList(List<Morphism> list) {
         for (Morphism x : list) {
             if (!maps(x))
                 return false;
@@ -74,8 +74,8 @@ public class Mapping {
         return x;
     }
 
-    public ArrayList<Morphism> mapList(ArrayList<Morphism> list) {
-        ArrayList<Morphism> mapped = new ArrayList<>();
+    public List<Morphism> mapList(List<Morphism> list) {
+        List<Morphism> mapped = new ArrayList<>();
         for (Morphism x : list)
             mapped.add(map(x));
         return mapped;
@@ -103,7 +103,7 @@ public class Mapping {
 
                 // Can only extend the mapping to r if all its dependencies are already mapped
                 Representation rep = entry.getKey();
-                ArrayList<Morphism> checklist = new ArrayList<>(rep.data);
+                List<Morphism> checklist = new ArrayList<>(rep.data);
                 checklist.removeIf(x -> !context.owns(x));
                 if (!mapsList(checklist))
                     continue;
@@ -133,14 +133,14 @@ public class Mapping {
         return true;
     }
 
-    public void search(ArrayList<Mapping> list) {
+    public void search(List<Mapping> list) {
         // Consider first datum x which is not yet mapped
         for (Morphism x : context.data) {
             if (maps(x))
                 continue;
 
             // Find candidates y for x
-            ArrayList<Morphism> candidates = findCandidates(x);
+            List<Morphism> candidates = findCandidates(x);
 
             if (candidates.isEmpty())
                 return;
@@ -165,9 +165,9 @@ public class Mapping {
             list.add(this);
     }
 
-    private ArrayList<Morphism> findCandidates(Morphism x) {
+    private List<Morphism> findCandidates(Morphism x) {
         Morphism C = map(x.category);
-        ArrayList<Morphism> candidates = new ArrayList<>();
+        List<Morphism> candidates = new ArrayList<>();
         boolean xIsObject = x.isObject();
         for (Morphism y : target.morphisms) {
             if (y.category == C && (!xIsObject || y.isObject()) && y.covariant == x.covariant)

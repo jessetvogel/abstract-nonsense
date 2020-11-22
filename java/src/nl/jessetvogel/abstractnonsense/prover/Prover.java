@@ -102,7 +102,7 @@ public class Prover {
                     }
 
                     // AT THIS POINT, IF AND ONLY IF SOME REPRESENTATION OF x.category INDUCES P
-                    ArrayList<Representation> repsC = thm.getRepresentations(C);
+                    List<Representation> repsC = thm.getRepresentations(C);
                     for (Representation repC : repsC) {
                         Mapping mapping = mappingFromRepresentations(thm, repC, repP);
                         if (mapping != null)
@@ -157,7 +157,7 @@ public class Prover {
 
     private void considerTheoremPartialMapping(Goal goal, Theorem thm, Mapping mapping) {
         // Search for possible mappings, and consider them all
-        ArrayList<Mapping> mappings = new ArrayList<>();
+        List<Mapping> mappings = new ArrayList<>();
         mapping.search(mappings);
         for(Mapping m : mappings)
             considerTheorem(goal, thm, m);
@@ -165,7 +165,7 @@ public class Prover {
 
     private void considerTheorem(Goal goal, Theorem thm, Mapping mapping) {
         // Try to apply the theorem using mapping
-        ArrayList<Morphism> result = thm.apply(mapping);
+        List<Morphism> result = thm.apply(mapping);
         // If it cannot be applied, stop
         if(result != null)
             implicationFromConditions(goal, result, goal.money - 1);
@@ -203,7 +203,7 @@ public class Prover {
         public final Morphism P;
         private int money;
         private boolean proven;
-        private final ArrayList<Implication> usedFor;
+        private final List<Implication> usedFor;
 
         Goal(Morphism P, int money) {
             this.P = P;

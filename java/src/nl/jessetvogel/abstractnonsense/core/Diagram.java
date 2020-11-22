@@ -7,12 +7,12 @@ import static nl.jessetvogel.abstractnonsense.core.Global.Cat;
 
 public class Diagram {
 
-    public ArrayList<Morphism> morphisms;
+    public List<Morphism> morphisms;
     Map<String, Morphism> symbols;
     Map<Representation, Morphism> representations;
 
     Diagram parent;
-    ArrayList<Diagram> children;
+    List<Diagram> children;
 
     Diagram(Diagram parent) {
         morphisms = new ArrayList<>();
@@ -23,6 +23,11 @@ public class Diagram {
         this.parent = parent;
         if (hasParent())
             parent.children.add(this);
+    }
+
+    public void detach() {
+        if (hasParent())
+            parent.children.remove(this);
     }
 
     boolean hasParent() {
@@ -65,8 +70,8 @@ public class Diagram {
         return null;
     }
 
-    public ArrayList<Representation> getRepresentations(Morphism x) {
-        ArrayList<Representation> reps = new ArrayList<>();
+    public List<Representation> getRepresentations(Morphism x) {
+        List<Representation> reps = new ArrayList<>();
         for (Map.Entry<Representation, Morphism> entry : representations.entrySet()) {
             if (entry.getValue() == x)
                 reps.add(entry.getKey());
@@ -100,7 +105,7 @@ public class Diagram {
         return morphisms.contains(x);
     }
 
-    private boolean ownsSomething(ArrayList<Morphism> list) {
+    private boolean ownsSomething(List<Morphism> list) {
         for (Morphism x : list) {
             if (owns(x))
                 return true;
@@ -176,7 +181,7 @@ public class Diagram {
         return N;
     }
 
-    public Morphism createComposition(ArrayList<Morphism> fList) {
+    public Morphism createComposition(List<Morphism> fList) {
         // Check if parent should create this instead
         if (hasParent() && !ownsSomething(fList))
             return parent.createComposition(fList);
@@ -193,7 +198,7 @@ public class Diagram {
         Morphism Y = fList.get(0).codomain;
 
         // All morphisms must connect
-        for (int i = 0; i < n; ++i) {
+        for (int i = 0; i < n - 1; ++i) {
             if (fList.get(i).domain != fList.get(i + 1).codomain) {
                 System.out.println("Morphisms do not connect well!");
                 return null;
@@ -235,7 +240,7 @@ public class Diagram {
         return g;
     }
 
-    public Morphism createPropertyApplication(Property property, ArrayList<Morphism> data) throws CreationException {
+    public Morphism createPropertyApplication(Property property, List<Morphism> data) throws CreationException {
         // Check if parent should create this instead
         if (hasParent() && !owns(property) && !ownsSomething(data))
             return parent.createPropertyApplication(property, data);
@@ -290,7 +295,7 @@ public class Diagram {
             throw new CreationException("Given morphism does not belong to functor domain");
 
         // Create representation
-        ArrayList<Morphism> data = new ArrayList<>();
+        List<Morphism> data = new ArrayList<>();
         data.add(F);
         data.add(x);
         Representation rep = new Representation(Representation.Type.FUNCTOR_APPLICATION, data);
@@ -336,7 +341,8 @@ public class Diagram {
     }
 
     public void resolveEqualities() throws CreationException {
-        for (Map.Entry<Representation, Morphism> entry : representations.entrySet()) {
+        Set<Map.Entry<Representation, Morphism>> entrySet = new HashSet<>(representations.entrySet());
+        for (Map.Entry<Representation, Morphism> entry : entrySet) {
             Representation rep = entry.getKey();
             if (rep.property != Global.Equals)
                 continue;
@@ -387,7 +393,7 @@ public class Diagram {
             e.diagram.setEqual(e.x, e.y);
     }
 
-    private void replaceMorphism(Morphism x, Morphism y, List<InducedEquality> induced) throws CreationException {
+    protected void replaceMorphism(Morphism x, Morphism y, List<InducedEquality> induced) throws CreationException {
         // Replace categories, domains and codomains
         for (Morphism z : morphisms) {
             if (z.category == x) z.category = y;
@@ -426,7 +432,7 @@ public class Diagram {
 
     // ------------ Stringify ------------
 
-    public String strList(ArrayList<Morphism> list) {
+    public String strList(List<Morphism> list) {
         StringBuilder s = new StringBuilder();
         for (Morphism x : list)
             s.append(str(x)).append(",");
@@ -457,7 +463,7 @@ public class Diagram {
         return "?";
     }
 
-    private class InducedEquality {
+    protected class InducedEquality {
 
         final Diagram diagram;
         final Morphism x, y;

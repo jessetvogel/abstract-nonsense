@@ -4,7 +4,7 @@ import java.util.*;
 
 public class Context extends Diagram {
 
-    ArrayList<Morphism> data;
+    List<Morphism> data;
 
     Context(Diagram parent) {
         super(parent);
@@ -19,7 +19,7 @@ public class Context extends Diagram {
         return data.contains(x);
     }
 
-    public boolean isValidData(Diagram target, ArrayList<Morphism> targetData) {
+    public boolean isValidData(Diagram target, List<Morphism> targetData) {
         Mapping mapping = mappingFromData(target, targetData);
         if(mapping == null)
             return false;
@@ -42,7 +42,7 @@ public class Context extends Diagram {
         return true;
     }
 
-    public Mapping mappingFromData(Diagram target, ArrayList<Morphism> targetData) {
+    public Mapping mappingFromData(Diagram target, List<Morphism> targetData) {
         // Amount of data must match
         if (targetData.size() != data.size())
             return null;
@@ -55,5 +55,11 @@ public class Context extends Diagram {
         }
 
         return mapping;
+    }
+
+    protected void replaceMorphism(Morphism x, Morphism y, List<InducedEquality> induced) throws CreationException {
+        super.replaceMorphism(x, y, induced);
+        if (data.contains(x))
+            data.replaceAll(z -> (z == x ? y : z));
     }
 }

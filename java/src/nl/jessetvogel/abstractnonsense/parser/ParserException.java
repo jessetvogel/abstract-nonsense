@@ -2,7 +2,7 @@ package nl.jessetvogel.abstractnonsense.parser;
 
 public class ParserException extends Exception {
 
-    Token token;
+    public final Token token;
 
     ParserException(Token token, String message) {
         super(message);

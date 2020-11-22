@@ -7,7 +7,7 @@ public class Theorem extends Context {
 
     public final String name;
     public final Diagram conclusion;
-    private final ArrayList<Morphism> conditions;
+    private final List<Morphism> conditions;
 
     public Theorem(Diagram parent, String name) {
         super(parent);
@@ -20,13 +20,13 @@ public class Theorem extends Context {
         conditions.add(x);
     }
 
-    public ArrayList<Morphism> apply(Mapping mapping) {
+    public List<Morphism> apply(Mapping mapping) {
         // Mapping must be valid
         if(!mapping.isValid())
             return null;
 
         // See what conditions are already satisfied, and which are not
-        ArrayList<Morphism> list = new ArrayList<>();
+        List<Morphism> list = new ArrayList<>();
         for(Morphism P : conditions) {
             Morphism Q = mapping.map(P);
             if (!mapping.target.knowsInstance(Q))
@@ -47,7 +47,7 @@ public class Theorem extends Context {
         while (!rToMap.isEmpty()) {
             for (Iterator<Map.Entry<Representation, Morphism>> it = rToMap.iterator(); it.hasNext(); ) {
                 Map.Entry<Representation, Morphism> entry = it.next();
-                ArrayList<Morphism> checklist = new ArrayList<>(entry.getKey().data);
+                List<Morphism> checklist = new ArrayList<>(entry.getKey().data);
                 checklist.removeIf(x -> !conclusion.owns(x));
                 if (!mapping.mapsList(checklist))
                     continue;
@@ -68,7 +68,7 @@ public class Theorem extends Context {
         }
 
         // Finally, create objects in other_diagram for all objects that do not have a representation in the conclusion (i.e. mostly proofs of statements)
-        ArrayList<Morphism> __tmp__ = new ArrayList<>();
+        List<Morphism> __tmp__ = new ArrayList<>();
         for (Morphism x : conclusion.morphisms) {
             if (!mapping.maps(x)) {
                 Morphism C = mapping.map(x.category);
@@ -86,5 +86,11 @@ public class Theorem extends Context {
 
         System.out.println("Apply Theorem " + name + " to (" + mapping.target.strList(mapping.mapList(data)) + ") to conclude " + mapping.target.strList(__tmp__));
         return true;
+    }
+
+    protected void replaceMorphism(Morphism x, Morphism y, List<InducedEquality> induced) throws CreationException {
+        super.replaceMorphism(x, y, induced);
+        if (conditions.contains(x))
+            conditions.replaceAll(z -> (z == x ? y : z));
     }
 }

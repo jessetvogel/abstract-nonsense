@@ -108,7 +108,7 @@ public class Parser {
 
         if (found(Token.Type.KEYWORD, "let")) {
             Token tLet = consume();
-            ArrayList<String> identifiers = parseListOfIdentifiers();
+            List<String> identifiers = parseListOfIdentifiers();
             for (String i : identifiers) {
                 if (book.hasSymbol(i))
                     throw new ParserException(tLet, "Name " + i + " has already been used");
@@ -162,7 +162,7 @@ public class Parser {
             Mapping mapping = thm.mappingFromData(book, parseListOfMorphisms(book));
             consume(Token.Type.SEPARATOR, ")");
 
-            ArrayList<Morphism> result = thm.apply(mapping);
+            List<Morphism> result = thm.apply(mapping);
             if (result == null)
                 System.out.println("Could not apply theorem");
             else if (result.isEmpty())
@@ -247,7 +247,7 @@ public class Parser {
 
             consume();
             Token t = currentToken;
-            ArrayList<String> identifiers = parseListOfIdentifiers();
+            List<String> identifiers = parseListOfIdentifiers();
             for (String i : identifiers) {
                 if (context.hasSymbol(i))
                     throw new ParserException(t, "Symbol " + i + " is already used");
@@ -281,7 +281,7 @@ public class Parser {
             first = false;
 
             consume();
-            ArrayList<String> identifiers = parseListOfIdentifiers();
+            List<String> identifiers = parseListOfIdentifiers();
             Token t = currentToken;
             for (String i : identifiers) {
                 if (context.hasSymbol(i))
@@ -330,11 +330,13 @@ public class Parser {
 
         boolean first = true;
         while (first ? found(Token.Type.KEYWORD, "then") : found(Token.Type.SEPARATOR, ",")) {
+            first = false;
+
             consume();
             Token t = currentToken;
             if (found(Token.Type.KEYWORD, "exists")) {
                 consume();
-                ArrayList<String> identifiers = parseListOfIdentifiers();
+                List<String> identifiers = parseListOfIdentifiers();
                 consume(Token.Type.SEPARATOR, ":");
                 MorphismType mType = parseType(conclusion);
                 if (mType.isObject) {
@@ -353,12 +355,12 @@ public class Parser {
         }
     }
 
-    private ArrayList<String> parseListOfIdentifiers() throws ParserException, IOException, LexerException {
+    private List<String> parseListOfIdentifiers() throws ParserException, IOException, LexerException {
         /*  LIST_OF_IDENTIFIERS =
                 IDENTIFIER ( , IDENTIFIER )+
          */
 
-        ArrayList<String> identifiers = new ArrayList<>();
+        List<String> identifiers = new ArrayList<>();
         identifiers.add(consume(Token.Type.IDENTIFIER).data);
         while (found(Token.Type.SEPARATOR, ",")) {
             consume();
@@ -451,7 +453,7 @@ public class Parser {
             Property property = diagram.getProperty(name);
             if (property != null) {
                 consume(Token.Type.SEPARATOR, "(");
-                ArrayList<Morphism> data = parseListOfMorphisms(diagram);
+                List<Morphism> data = parseListOfMorphisms(diagram);
                 consume(Token.Type.SEPARATOR, ")");
                 try {
                     x = diagram.createPropertyApplication(property, data);
@@ -490,7 +492,7 @@ public class Parser {
             if (found(Token.Type.SEPARATOR, ".")) {
                 consume();
                 Morphism y = parseMorphism(diagram);
-                ArrayList<Morphism> fList = new ArrayList<>();
+                List<Morphism> fList = new ArrayList<>();
                 fList.add(x);
                 fList.add(y);
                 x = diagram.createComposition(fList);
@@ -500,7 +502,7 @@ public class Parser {
             if (found(Token.Type.SEPARATOR, "&") || found(Token.Type.SEPARATOR, "|") || found(Token.Type.SEPARATOR, "=>") || found(Token.Type.SEPARATOR, "=")) {
                 Token t = consume();
                 Morphism y = parseMorphism(diagram);
-                ArrayList<Morphism> data = new ArrayList<>();
+                List<Morphism> data = new ArrayList<>();
                 data.add(x);
                 data.add(y);
                 try {
@@ -526,12 +528,12 @@ public class Parser {
         return x;
     }
 
-    private ArrayList<Morphism> parseListOfMorphisms(Diagram diagram) throws ParserException, IOException, LexerException {
+    private List<Morphism> parseListOfMorphisms(Diagram diagram) throws ParserException, IOException, LexerException {
         /*  LIST_OF_OBJECTS =
                 OBJECT { , OBJECT }
          */
 
-        ArrayList<Morphism> morphisms = new ArrayList<>();
+        List<Morphism> morphisms = new ArrayList<>();
         morphisms.add(parseMorphism(diagram));
 
         while (found(Token.Type.SEPARATOR, ",")) {

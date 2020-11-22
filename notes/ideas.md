@@ -29,7 +29,7 @@
     - But then we need *Products* of categories.
 - How will the fiber product $- \times_S -$ be defined? It takes two morphisms $f : X \to S$ and $g : Y \to S$, and produces an object $X \times_S Y$ together with morphisms $X \times_S Y \to X$ and $X \times_S Y \to Y$. This is technically an object in some strange cone category.. Do we really want that?
   - Then we at least need to make $\text{Hom}(-, S)$ a category.
-- Note: that not every function will be a functor! E.g. $\text{IsAffine} : \text{Sch} \to \text{Prop}​$ will not be a functor! So we will need 'just functions'.
+- Note: that not every function will be a functor! E.g. $\text{IsAffine} : \text{Sch} \to \text{Prop}$ will not be a functor! So we will need 'just functions'.
 
 
 
@@ -155,7 +155,7 @@
   - ~~Dimension?~~ If we want to incorporate dimensions, then just let `dim(X)` be the category $\Z$ where $n \in \Z$ denotes a proof that $X$ is of dimension $n$. Although, not sure how to implement it.
   - **NOTE**: to have (counter-)examples, it is important that the properties of an object are really binded to the object!
     - Or more generally, we have a *Diagram* consisting of Objects, Morphisms and conditions on those. Then `cartesian/pullback` could be an Adjective!
-    - An *Adjective* could be associated to certain Diagrams in certain categories. E.g. objects can have adjectives (diagram consisting of 1 object), morphisms (diagram consisting of 1 morphism (and 2 objects then as well, right)), and squares (diagram $X, Y, W, S, f : X \to S, g : Y \to S, \pi_1 : W \to X, \pi_2 : W \to Y​$) can be 'cartesian', or a 'pushout'.
+    - An *Adjective* could be associated to certain Diagrams in certain categories. E.g. objects can have adjectives (diagram consisting of 1 object), morphisms (diagram consisting of 1 morphism (and 2 objects then as well, right)), and squares (diagram $X, Y, W, S, f : X \to S, g : Y \to S, \pi_1 : W \to X, \pi_2 : W \to Y$) can be 'cartesian', or a 'pushout'.
 
 
 
@@ -178,7 +178,7 @@
 1. Treat propositions completely separately from categories, i.e. propositions are not objects in a category, but just objects of class Prop.
 
 2. ~~Treat Prop also as a category, and therefore something like `affine(X)` is actually an object in a *Diagram*.~~
-3. Treat the output of an Adjective as a Category! In particular, an object of the category `affine(X)` represents a proof that $X​$ is affine. Then we can actually have the proofs be part of the diagram.
+3. Treat the output of an Adjective as a Category! In particular, an object of the category `affine(X)` represents a proof that $X$ is affine. Then we can actually have the proofs be part of the diagram.
 
    - Then: how to deal with connectors like `&`, `|`, `=>`, `~` ?
 
@@ -210,7 +210,7 @@
    ~~What if we say that a functor reverses morphisms if its 'covariantness' disagrees with the covariantness of the input and output?~~ [Cumbersome]
    ~~This seems to cause more problems than it solves actually. Or does it? What if we just say that categories are never contravariant? It only seems not elegant.~~ [But probably the best solution]
 
-- **Note**: the 'not' functor `Cat -> Cat` is contravariant: if $P \to Q$, then $\sim{Q} \to \sim{P}$. Actually, one defines `~` to be `(-) => 0`. But I don't think that we want $\sim{P}​$ to be considered inside `Cat^op` that would be weird.
+- **Note**: the 'not' functor `Cat -> Cat` is contravariant: if $P \to Q$, then $\sim{Q} \to \sim{P}$. Actually, one defines `~` to be `(-) => 0`. But I don't think that we want $\sim{P}$ to be considered inside `Cat^op` that would be weird.
 - **Note:** we also have the functor `op : Cat -> Cat` which is covariant ($\mathcal{C} \to \mathcal{D}$ yields $\mathcal{C}^{\text{op}} \to \mathcal{D}^\text{op}$) and squares to the identity!
 - The problem is, we add so much information, while there really is no extra information. We just invert some arrows sometimes.
 - **Note**: an equivalence of categories is not the same as an isomorphism, right? Say we ever want to express an equivalence of categories, how would we do so? It is an option still to express it as an equality though.

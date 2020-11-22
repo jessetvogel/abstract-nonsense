@@ -14,7 +14,7 @@ public class Main {
         {
             // Create Cat
             Global.book = new Book(null);
-            Global.Cat =  new Morphism();
+            Global.Cat = new Morphism();
             Global.book.addMorphism(Global.Cat);
             Global.book.assignSymbol("Cat", Global.Cat);
 
@@ -49,7 +49,7 @@ public class Main {
         }
 
         // Parse input
-        while(true) {
+        while (true) {
             // Read from System.in
             Scanner scanner = new Scanner(System.in);
             Lexer lexer = new Lexer(scanner);
@@ -57,7 +57,9 @@ public class Main {
 
             try {
                 parser.parse();
-            } catch (LexerException | IOException | ParserException e) {
+            } catch (ParserException e) {
+                System.err.print("Parsing error on line " + e.token.line + " at position " + e.token.position + ": " + e.getMessage());
+            } catch (LexerException | IOException e) {
                 e.printStackTrace();
             }
         }

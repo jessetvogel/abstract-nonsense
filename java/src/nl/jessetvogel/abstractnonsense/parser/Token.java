@@ -12,9 +12,9 @@ public class Token {
         STRING
     }
 
-    Type type;
-    int line, position;
-    String data;
+    public final Type type;
+    public final int line, position;
+    public final String data;
 
     Token(int line, int position, Type type) {
         this(line, position, type, null);

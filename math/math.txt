@@ -1,34 +1,11 @@
-# Define rings, schemes and topological spaces
-let Ring, Scheme, Top : Cat
-
-# Define functors
-let Spec : Ring ~> Scheme
-let top : Scheme -> Top
-
-# Define scheme properties
-property affine { for X : Scheme }
-property qcompact { for X : Scheme }
-property regular { for X : Scheme }
-property noetherian { for X : Scheme }
-property locally_noetherian { for X : Scheme }
-property integral { for X : Scheme }
-property reduced { for X : Scheme }
-property irreducible { for X : Scheme }
-property cohen_macaulay { for X : Scheme }
-
-
-property etale { use X, Y : Scheme for f : X -> Y }
-property m_affine { use X, Y : Scheme for f : X -> Y }
-
-# Define topological properties
-property connected { for X : Top }
+import "/Users/jessevogel/Projects/abstract-nonsense/math/AG-definitions.txt"
 
 # Define theorems
 theorem T0 { for X : Scheme with affine(X) then qcompact(X) }
 theorem T1 { for X : Scheme with regular(X) then locally_noetherian(X) }
 theorem T2 { for X : Scheme with locally_noetherian(X), qcompact(X) then noetherian(X) }
-theorem T3 { for X : Scheme with noetherian(X) then locally_noetherian(X) then qcompact(X) }
-theorem T4 { for X : Scheme with integral(X) then reduced(X) then irreducible(X) }
+theorem T3 { for X : Scheme with noetherian(X) then locally_noetherian(X), qcompact(X) }
+theorem T4 { for X : Scheme with integral(X) then reduced(X), irreducible(X) }
 theorem T5 { for X : Scheme with reduced(X), irreducible(X) then integral(X) }
 theorem T6 { for X : Scheme with regular(X) then cohen_macaulay(X) }
 theorem T7 { for X : Scheme with integral(X) then connected(top(X)) }
@@ -40,6 +17,47 @@ theorem T8 {
     then affine(X)
 }
 
+
+theorem T9 {
+    for X, Y : Scheme, f : X -> Y
+    with m_smooth(f), regular(Y)
+    then regular(X)
+}
+
+theorem T10 {
+    use X, Y : Scheme
+    for f : X -> Y
+    with m_formally_smooth(f), m_locally_finite_presentation(f)
+    then m_smooth(X)
+}
+
+theorem T11 {
+    use X, Y : Scheme
+    for f : X -> Y
+    with m_smooth(f)
+    then m_formally_smooth(f), m_locally_finite_presentation(f)
+}
+
+theorem T12 {
+    use X, Y : Scheme
+    for f : X -> Y
+    with m_locally_finite_presentation(f), m_qseparated(f), m_qcompact(f)
+    then m_finite_presentation(f)
+}
+
+theorem T13 {
+    use X, Y : Scheme
+    for f : X -> Y
+    with m_formally_etale(f), m_locally_finite_presentation(f)
+    then m_etale(f)
+}
+
+theorem T14 {
+    use X, Y : Scheme
+    for f : X -> Y
+    with m_etale(f)
+    then m_formally_etale(f), m_locally_finite_presentation(f)
+}
 
 
 
