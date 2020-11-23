@@ -1,6 +1,5 @@
 package nl.jessetvogel.abstractnonsense.core;
 
-import java.lang.reflect.Array;
 import java.util.*;
 
 public class Theorem extends Context {

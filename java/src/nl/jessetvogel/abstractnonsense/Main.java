@@ -6,6 +6,8 @@ import nl.jessetvogel.abstractnonsense.core.Morphism;
 import nl.jessetvogel.abstractnonsense.core.Property;
 import nl.jessetvogel.abstractnonsense.parser.*;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 
 public class Main {
@@ -46,6 +48,14 @@ public class Main {
             Global.Equals.addData(Global.Equals.createMorphism(x, y, true));
             Global.Equals.addData(Global.Equals.createMorphism(z, w, true));
             Global.book.addProperty(Global.Equals);
+        }
+
+        try {
+            Scanner scanner = new Scanner(new FileInputStream("/Users/jessevogel/Projects/abstract-nonsense/math/math.txt"));
+            Lexer lexer = new Lexer(scanner);
+            (new Parser(lexer, Global.book)).parse();
+        } catch (LexerException | IOException | ParserException e) {
+            e.printStackTrace();
         }
 
         // Parse input
