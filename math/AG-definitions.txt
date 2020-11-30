@@ -3,43 +3,47 @@ let Ring, Scheme, Top : Cat
 
 # Define functors
 let Spec : Ring -> Scheme
+let Global : Scheme -> Ring
 let top : Scheme -> Top
 
 # Define scheme properties
-property affine { for X : Scheme }
-property qcompact { for X : Scheme }
-property regular { for X : Scheme }
-property noetherian { for X : Scheme }
-property locally_noetherian { for X : Scheme }
-property integral { for X : Scheme }
-property reduced { for X : Scheme }
-property irreducible { for X : Scheme }
-property cohen_macaulay { for X : Scheme }
-property excellent { for X : Scheme }
-property separated { for X : Scheme }
-property qseparated { for X : Scheme }
-property normal { for X : Scheme }
+property affine { let X : Scheme def X = Spec(Global(X)) }
+
+property    qcompact,
+            regular,
+            noetherian,
+            locally_noetherian,
+            integral,
+            reduced,
+            irreducible,
+            cohen_macaulay,
+            excellent,
+            separated,
+            qseparated,
+            normal {
+                let X : Scheme
+}
 
 # Define morphism properties
-property m_etale { use X, Y : Scheme for f : X -> Y }
-property m_formally_etale { use X, Y : Scheme for f : X -> Y }
-property m_unramified { use X, Y : Scheme for f : X -> Y }
-property m_formally_unramified { use X, Y : Scheme for f : X -> Y }
-property m_smooth { use X, Y : Scheme for f : X -> Y }
-property m_formally_smooth { use X, Y : Scheme for f : X -> Y }
-
-property m_proper { use X, Y : Scheme for f : X -> Y }
-property m_finite { use X, Y : Scheme for f : X -> Y }
-property m_qfinite { use X, Y : Scheme for f : X -> Y }
-property m_flat { use X, Y : Scheme for f : X -> Y }
-
-property m_affine { use X, Y : Scheme for f : X -> Y }
-property m_qcompact { use X, Y : Scheme for f : X -> Y }
-property m_separated { use X, Y : Scheme for f : X -> Y }
-property m_qseparated { use X, Y : Scheme for f : X -> Y }
-property m_regular { use X, Y : Scheme for f : X -> Y }
-property m_finite_presentation { use X, Y : Scheme for f : X -> Y }
-property m_locally_finite_presentation { use X, Y : Scheme for f : X -> Y }
+property    etale,
+            formally_etale,
+            unramified,
+            formally_unramified,
+            smooth,
+            formally_smooth,
+            proper,
+            finite,
+            qfinite,
+            flat,
+            affine,
+            qcompact,
+            separated,
+            qseparated,
+            regular,
+            finite_presentation,
+            locally_finite_presentation {
+                use X, Y : Scheme let f : X -> Y
+}
 
 # Define topological properties
-property connected { for X : Top }
+property connected { let X : Top }

@@ -232,6 +232,7 @@ public class Prover {
             if (conditions.isEmpty()) {
                 try {
                     session.identify(goal.P, session.True);
+                    goal.setProven();
                 }
                 catch(Exception e) {
                     System.err.println(e.getMessage());

@@ -1,13 +1,13 @@
 # Theory
 let Sch : Cat
 
-property proper { use X, Y : Sch for f : X -> Y }
-property finite { use X, Y : Sch for f : X -> Y }
+property proper { use X, Y : Sch let f : X -> Y }
+property finite { use X, Y : Sch let f : X -> Y }
 
-theorem finite_imp_proper { use X, Y : Sch for f : X -> Y with finite(f) then proper(f) }
+theorem finite_imp_proper { use X, Y : Sch let f : X -> Y with finite(f) then proper(f) }
 
 
-theorem comp_proper { use X, Y, Z : Sch for f : X -> Y, g : Y -> Z with proper(f), proper(g) then proper(g.f) }
+theorem comp_proper { use X, Y, Z : Sch let f : X -> Y, g : Y -> Z with proper(f), proper(g) then proper(g.f) }
 
 
 

@@ -94,16 +94,26 @@ public class Session extends Diagram {
 
     public Morphism dom(Morphism f) {
         morphismSetInfo(f);
-        return new Morphism(f.info.dom, f.k - 1);
+        if(f.k == f.info.k)
+            return new Morphism(f.info.dom, f.k - 1);
+        else
+            return new Morphism(f.index, f.k - 1);
     }
 
     public Morphism cod(Morphism f) {
         morphismSetInfo(f);
-        return new Morphism(f.info.cod, f.k - 1);
+        if(f.k == f.info.k)
+            return new Morphism(f.info.cod, f.k - 1);
+        else
+            return new Morphism(f.index, f.k - 1);
     }
 
-    public Morphism id(Morphism f) {
-        // TODO: check if k does not exceed n!
+    public Morphism id(Morphism f) throws CreationException {
+        morphismSetInfo(f);
+        int n = degree(f.info.cat);
+        if(f.k >= n)
+            throw new CreationException("Cannot create " + (f.k + 1) + "-morphisms in a " + n + "-category");
+
         return new Morphism(f.index, f.k + 1);
     }
 
@@ -156,11 +166,15 @@ public class Session extends Diagram {
     }
 
     public void addProperty(Property prop) {
-        properties.put(prop.name, prop);
+        properties.put(prop.name + prop.context.signature(), prop);
     }
 
-    public boolean hasProperty(String name) {
-        return properties.containsKey(name);
+    public boolean hasProperty(String name, String signature) {
+        return properties.containsKey(name + signature);
+    }
+
+    public Property getProperty(String name, String signature) {
+        return properties.get(name + signature);
     }
 
     public void addTheorem(Theorem thm) {
@@ -169,10 +183,6 @@ public class Session extends Diagram {
 
     public boolean hasTheorem(String name) {
         return theorems.containsKey(name);
-    }
-
-    public Property getProperty(String name) {
-        return properties.get(name);
     }
 
     public Theorem getTheorem(String name) {
@@ -269,5 +279,12 @@ public class Session extends Diagram {
         Morphism f = new Morphism(index, info.k);
         f.info = info;
         return f;
+    }
+
+    public String signature(List<Morphism> list) {
+        StringJoiner sj = new StringJoiner(",", "(", ")");
+        for(Morphism x : list)
+            sj.add(String.valueOf(x.k));
+        return sj.toString();
     }
 }

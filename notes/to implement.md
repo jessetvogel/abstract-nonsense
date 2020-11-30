@@ -1,4 +1,11 @@
-### To implement
+### Priority
+
+- ~~`Definition` / aliasing | for `affine(X) <=> X = Spec(Ring(X))`~~
+- ~~Property signatures, so that affine can hold for schemes and scheme morphisms~~
+
+
+
+### To Implement
 
 - ~~A way to load files? `load schemes` or so.. / `import "filename"`~~
 - ~~A efficient way to find mappings~~

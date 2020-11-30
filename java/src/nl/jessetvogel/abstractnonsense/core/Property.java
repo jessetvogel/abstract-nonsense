@@ -1,12 +1,21 @@
 package nl.jessetvogel.abstractnonsense.core;
 
-public class Property extends Context {
+import java.util.List;
 
-    String name;
+public class Property {
 
-    public Property(Session session, String name) {
-        super(session, session);
+    final String name;
+    final Context context;
+    final Morphism definition;
+
+    public Property(Context context, String name) {
+        this(context, name, null);
+    }
+
+    public Property(Context context, String name, Morphism definition) {
         this.name = name;
+        this.context = context;
+        this.definition = definition;
     }
 
 }

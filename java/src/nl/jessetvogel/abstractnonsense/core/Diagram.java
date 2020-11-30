@@ -152,7 +152,8 @@ public class Diagram {
             return parent.createPropertyApplication(property, data);
 
         // The data should fit in the context of the property
-        if (!property.isValidData(this, data))
+        Mapping mapping = property.context.mappingFromData(this, data);
+        if(mapping == null || !mapping.isValid())
             throw new CreationException("Property does not apply to the given data");
 
         // Create representation
@@ -160,8 +161,12 @@ public class Diagram {
         if (representations.containsKey(rep))
             return representations.get(rep);
 
-        // Create proposition
-        Morphism P = session.createObject(this, session.Prop);
+        // If property has a definition, use that one. Otherwise, create proposition
+        Morphism P;
+        if(property.definition != null)
+            P = mapping.map(property.definition);
+        else
+            P = session.createObject(this, session.Prop);
         representations.put(rep, P);
         return P;
     }

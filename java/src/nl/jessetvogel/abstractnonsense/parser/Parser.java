@@ -72,9 +72,9 @@ public class Parser {
                 assume LIST_OF_MORPHISMS |
                 prove MORPHISM |
                 apply IDENTIFIER ( LIST_OF_MORPHISMS ) |
-                property IDENTIFIER { IMPLICITS GIVENS } |
+                property LIST_OF_IDENTIFIERS { IMPLICITS GIVENS (def MORPHISM)? } |
                 theorem IDENTIFIER { IMPLICITS GIVENS CONDITIONS CONCLUSIONS } |
-                whats MORPHISM
+                check MORPHISM
          */
 
         if (found(Token.Type.SEPARATOR, ";")) {
@@ -179,19 +179,34 @@ public class Parser {
         }
 
         if (found(Token.Type.KEYWORD, "property")) {
-            consume();
-            Token tIdentifier = consume(Token.Type.IDENTIFIER);
-            String name = tIdentifier.data;
-            if (session.hasProperty(name))
-                throw new ParserException(tIdentifier, "Property name " + name + " already used");
-            Property property = new Property(session, name);
+            Token tProperty = consume();
+            List<String> identifiers = parseListOfIdentifiers();
+
+            Context context = new Context(session, session);
             consume(Token.Type.SEPARATOR, "{");
-            parseImplicits(property);
-            parseGivens(property);
+            parseImplicits(context);
+            parseGivens(context);
+
+            Morphism definition = null;
+            if(found(Token.Type.KEYWORD, "def")) {
+                consume();
+                definition = parseMorphism(context);
+            }
+
             consume(Token.Type.SEPARATOR, "}");
-            if (!property.isReduced())
-                throw new ParserException(tIdentifier, "Property context contains morphisms that do not depend on the data");
-            session.addProperty(property);
+
+            if(!context.isReduced())
+                throw new ParserException(tProperty, "Property context contains morphisms that do not depend on the data");
+
+            String signature = context.signature();
+            for(String name : identifiers) {
+                if(session.hasProperty(name, signature))
+                    throw new ParserException(tProperty, "Property " + name + " with signature " + signature + " already used");
+
+                Property property = new Property(context, name, definition);
+                session.addProperty(property);
+            }
+
             return;
         }
 
@@ -214,7 +229,7 @@ public class Parser {
             return;
         }
 
-        if (found(Token.Type.KEYWORD, "info")) {
+        if (found(Token.Type.KEYWORD, "check")) {
             consume();
             Morphism x = parseMorphism(session);
             if(x.k == 0)
@@ -279,14 +294,14 @@ public class Parser {
 
     private void parseGivens(Context context) throws ParserException, IOException, LexerException {
         /*  GIVENS =
-                for LIST_OF_IDENTIFIERS : TYPE ( , LIST_OF_IDENTIFIERS : TYPE )*
+                let LIST_OF_IDENTIFIERS : TYPE ( , LIST_OF_IDENTIFIERS : TYPE )*
          */
 
-        if (!found(Token.Type.KEYWORD, "for"))
+        if (!found(Token.Type.KEYWORD, "let"))
             throw new ParserException(currentToken, "Context must have data");
 
         boolean first = true;
-        while (first ? found(Token.Type.KEYWORD, "for") : found(Token.Type.SEPARATOR, ",")) {
+        while (first ? found(Token.Type.KEYWORD, "let") : found(Token.Type.SEPARATOR, ",")) {
             first = false;
 
             consume();
@@ -379,7 +394,11 @@ public class Parser {
         } else if (found(Token.Type.KEYWORD, "id")) {
             Token tId = consume();
             consume(Token.Type.SEPARATOR, "(");
-            x = session.id(parseMorphism(diagram));
+            try {
+                x = session.id(parseMorphism(diagram));
+            } catch (CreationException e) {
+                throw new ParserException(tId, e.getMessage());
+            }
             consume(Token.Type.SEPARATOR, ")");
         } else if (found(Token.Type.KEYWORD, "dom")) {
             consume();
@@ -403,22 +422,31 @@ public class Parser {
             Token tIdentifier = consume();
             String name = tIdentifier.data;
 
-            // If name refers to a property
-            Property property = session.getProperty(name);
-            if (property != null) {
-                consume(Token.Type.SEPARATOR, "(");
-                List<Morphism> data = parseListOfMorphisms(diagram);
-                consume(Token.Type.SEPARATOR, ")");
-                try {
-                    x = diagram.createPropertyApplication(property, data);
-                } catch (CreationException e) {
-                    throw new ParserException(tIdentifier, e.getMessage());
+            // Try to interpret name as a symbol in session
+            x = diagram.getMorphism(name);
+
+            // If failed, interpret as property or definition
+            if (x == null) {
+                if(found(Token.Type.SEPARATOR, "(")) {
+                    consume(Token.Type.SEPARATOR, "(");
+                    List<Morphism> data = parseListOfMorphisms(diagram);
+                    consume(Token.Type.SEPARATOR, ")");
+
+                    String signature = session.signature(data);
+                    Property property = session.getProperty(name, signature);
+
+                    if (property == null)
+                        throw new ParserException(tIdentifier, "No property " + name + " with signature " + signature);
+
+                    try {
+                        x = diagram.createPropertyApplication(property, data);
+                    } catch (CreationException e) {
+                        throw new ParserException(tIdentifier, e.getMessage());
+                    }
                 }
-            } else {
-                // Otherwise get morphism by name
-                x = diagram.getMorphism(name);
-                if (x == null)
+                else {
                     throw new ParserException(tIdentifier, "Unknown identifier " + name);
+                }
             }
         }
 

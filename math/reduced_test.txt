@@ -1,9 +1,9 @@
 let C : Cat;
 
-property P { for x : C }
-property Q { for x : C }
+property P { let x : C }
+property Q { let x : C }
 
-theorem thm { for y : C then Q(y) }
+theorem thm { let y : C then Q(y) }
 
 let z : C
 

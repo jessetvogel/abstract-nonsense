@@ -202,6 +202,8 @@ public class Mapping {
         List<Morphism> candidates = new ArrayList<>();
         for (int j : target.indices) {
             Morphism y = session.morphism(j);
+            if(y == null)
+                continue;
             if(y.k > x.k)
                 continue;
             if(y.k < x.k)

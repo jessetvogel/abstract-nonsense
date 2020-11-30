@@ -2,11 +2,11 @@ package nl.jessetvogel.abstractnonsense.core;
 
 import java.util.*;
 
-public abstract class Context extends Diagram {
+public class Context extends Diagram {
 
     List<Morphism> data;
 
-    Context(Session session, Diagram parent) {
+    public Context(Session session, Diagram parent) {
         super(session, parent);
         data = new ArrayList<>();
     }
@@ -58,6 +58,11 @@ public abstract class Context extends Diagram {
 
         return mapping;
     }
+
+    public String signature() {
+        return session.signature(data);
+    }
+
 
 //    protected void replaceMorphism(Morphism x, Morphism y, List<InducedEquality> induced) throws CreationException {
 //        super.replaceMorphism(x, y, induced);
