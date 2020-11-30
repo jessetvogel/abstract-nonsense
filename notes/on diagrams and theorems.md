@@ -1,6 +1,6 @@
 ### Where do diagrams appear?
 
-- **Book**: objects, representations, properties, theorems, examples
+- ~~**Book**~~ **Session**: objects, representations, properties, theorems, examples
 - **Theorem**: objects, representations, data, conditions, conclusions
   - Think of '*conclusions*' as a diagram on top of the context of the theorem. A theorem then means that any diagram can be completed to a larger diagram.
 - **Property**: objects, representations, data, conditions
@@ -14,7 +14,7 @@
 - class *Property* extends *Context* { }
 - class *Theorem* extends *Context* { Diagram conclusions }
 - class *Example* extends *Diagram* {}
-- class *Book* extends *Diagram* { Map\<String, Property\> properties, Map\<String, Theorem\> theorems, List\<Example\> examples }
+- class ~~Book~~ *Session* extends *Diagram* { Map\<String, Property\> properties, Map\<String, Theorem\> theorems, List\<Example\> examples }
 
 
 
@@ -24,7 +24,7 @@
 
 
 
-- (Allowing a diagram to have multiple parents can make it easier to verify conditions without polluting diagrams to which you want to apply a theorem (when it is not applicable).)
+- ~~(Allowing a diagram to have multiple parents can make it easier to verify conditions without polluting diagrams to which you want to apply a theorem (when it is not applicable).)~~ No, I think you can think of a workaroud if you really want to, but also, I don't think it matters
 
 
 

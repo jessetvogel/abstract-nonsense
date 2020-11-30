@@ -2,7 +2,7 @@
 let Ring, Scheme, Top : Cat
 
 # Define functors
-let Spec : Ring ~> Scheme
+let Spec : Ring -> Scheme
 let top : Scheme -> Top
 
 # Define scheme properties

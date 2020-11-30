@@ -4,17 +4,20 @@ import java.util.*;
 
 public class Mapping {
 
-    Context context;
-    public Diagram target;
-    Map<Morphism, Morphism> mapping;
+    private final Session session;
+    public final Context context;
+    public final Diagram target;
+    private final Map<Integer, Integer> mapping; // This is sufficient (and convenient) as we know that k-morphisms will be mapped to k-morphisms!
 
     public Mapping(Context context, Diagram target) {
+        this.session = context.session;
         this.context = context;
         this.target = target;
         mapping = new HashMap<>();
     }
 
     public Mapping(Mapping mapping) {
+        this.session = mapping.session;
         this.context = mapping.context;
         this.target = mapping.target;
         this.mapping = new HashMap<>(mapping.mapping);
@@ -23,41 +26,49 @@ public class Mapping {
     public boolean set(Morphism x, Morphism y) {
         // If already set, not allowed to clash
         if (maps(x))
-            return map(x) == y;
+            return map(x).equals(y);
 
-        // Objects must map to objects
-        if (x.isObject() && !y.isObject())
+        // k-morphisms must map to k-morphisms
+        if (x.k != y.k)
             return false;
 
-        // Covariant morphisms must map to covariant morphisms
-        if (x.covariant != y.covariant)
-            return false;
+        // lift as long as x is an identity morphism
+        while (session.isIdentity(x)) {
+            if (!session.isIdentity(y))
+                return false;
+            x = new Morphism(x.index, x.k - 1);
+            y = new Morphism(y.index, y.k - 1);
+        }
 
-        mapping.put(x, y);
+        mapping.put(x.index, y.index);
 
         // Induced mapping for category, domain, codomain (that is, if they need to be mapped)
-        if (context.owns(x.category) ? !set(x.category, y.category) : (x.category != y.category))
+        if (context.owns(session.cat(x)) ? !set(session.cat(x), session.cat(y)) : (!session.cat(x).equals(session.cat(y))))
             return false;
 
-        if (!x.isObject()) {
-            if (context.owns(x.domain) ? !set(x.domain, y.domain) : x.domain != y.domain)
+        if (x.k > 0) {
+            if (context.owns(session.dom(x)) ? !set(session.dom(x), session.dom(y)) : !session.dom(x).equals(session.dom(y)))
                 return false;
-            if (context.owns(x.codomain) ? !set(x.codomain, y.codomain) : x.codomain != y.codomain)
+            if (context.owns(session.cod(x)) ? !set(session.cod(x), session.cod(y)) : !session.cod(x).equals(session.cod(y)))
                 return false;
         }
 
         // If x is data, stop here.
         if (context.isData(x))
             return true;
-
-        // TODO: CAN DO MORE HERE ALREADY
-        // TODO: maybe already map everything that depends on what is currently mapped
+//
+//        // TODO: CAN DO MORE HERE ALREADY
+//        // TODO: maybe already map everything that depends on what is currently mapped
 
         return true;
     }
 
     public boolean maps(Morphism x) {
-        return mapping.containsKey(x);
+        return mapping.containsKey(x.index);
+    }
+
+    public boolean maps(int index) {
+        return mapping.containsKey(index);
     }
 
     public boolean mapsList(List<Morphism> list) {
@@ -69,8 +80,8 @@ public class Mapping {
     }
 
     public Morphism map(Morphism x) {
-        if (mapping.containsKey(x))
-            return mapping.get(x);
+        if (maps(x))
+            return new Morphism(mapping.get(x.index), x.k);
         return x;
     }
 
@@ -84,8 +95,10 @@ public class Mapping {
     public boolean isValid() {
         // All context data must be mapped
         for (Morphism x : context.data) {
-            if (!maps(x))
+            if (!maps(x)) {
+                System.out.println("Does not map some data");
                 return false;
+            }
         }
 
         // Make sure all representations are well-mapped
@@ -95,7 +108,7 @@ public class Mapping {
             updates = false;
             for (Iterator<Map.Entry<Representation, Morphism>> it = rToMap.iterator(); it.hasNext(); ) {
                 Map.Entry<Representation, Morphism> entry = it.next();
-                // If r is a representation of some datum, nothing to check
+                // If r is a representation of some datum, nothing to check // TODO: is this even possible? do data have non-symbol represenations?
                 if (context.isData(entry.getValue())) {
                     it.remove();
                     continue;
@@ -110,13 +123,16 @@ public class Mapping {
 
                 Morphism y;
                 try {
-                    y = target.createFromPlaceholders(rep, this);
+                    y = target.createFromRepresentation(rep, this);
                 } catch (CreationException e) {
+                    System.err.println(e.getMessage());
                     return false;
                 }
 
-                if (!set(entry.getValue(), y))
+                if (!set(entry.getValue(), y)) {
+                    System.err.println("Failed to map " + context.str(entry.getValue()) + " to " + target.str(y));
                     return false;
+                }
 
                 it.remove();
                 updates = true;
@@ -144,6 +160,7 @@ public class Mapping {
 
             if (candidates.isEmpty())
                 return;
+
             if (candidates.size() == 1) {
                 if (!set(x, candidates.get(0)))
                     return;
@@ -166,21 +183,38 @@ public class Mapping {
     }
 
     private List<Morphism> findCandidates(Morphism x) {
-        Morphism C = map(x.category);
-        List<Morphism> candidates = new ArrayList<>();
-        boolean xIsObject = x.isObject();
-        for (Morphism y : target.morphisms) {
-            if (y.category == C && (!xIsObject || y.isObject()) && y.covariant == x.covariant)
-                candidates.add(y);
+        Morphism cat = session.cat(x), dom = session.dom(x), cod = session.cod(x);
+        boolean filterCat = !context.owns(cat), filterDom = !context.owns(dom), filterCod = !context.owns(cod);
+
+        if (!filterCat && maps(cat)) {
+            cat = map(cat);
+            filterCat = true;
+        }
+        if (!filterDom && maps(dom)) {
+            dom = map(dom);
+            filterDom = true;
+        }
+        if (!filterCod && maps(cod)) {
+            cod = map(cod);
+            filterCod = true;
         }
 
-        if (maps(x.domain)) {
-            Morphism yDomain = map(x.domain);
-            candidates.removeIf(y -> y.domain != yDomain);
-        }
-        if (maps(x.codomain)) {
-            Morphism yCodomain = map(x.codomain);
-            candidates.removeIf(y -> y.codomain != yCodomain);
+        List<Morphism> candidates = new ArrayList<>();
+        for (int j : target.indices) {
+            Morphism y = session.morphism(j);
+            if(y.k > x.k)
+                continue;
+            if(y.k < x.k)
+                y = new Morphism(y.index, x.k);
+
+            if(filterCat && !session.cat(y).equals(cat))
+                continue;
+            if(filterDom && !session.dom(y).equals(dom))
+                continue;
+            if(filterCod && !session.cod(y).equals(cod))
+                continue;
+
+            candidates.add(y);
         }
 
         return candidates;

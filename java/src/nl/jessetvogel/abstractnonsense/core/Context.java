@@ -2,12 +2,12 @@ package nl.jessetvogel.abstractnonsense.core;
 
 import java.util.*;
 
-public class Context extends Diagram {
+public abstract class Context extends Diagram {
 
     List<Morphism> data;
 
-    Context(Diagram parent) {
-        super(parent);
+    Context(Session session, Diagram parent) {
+        super(session, parent);
         data = new ArrayList<>();
     }
 
@@ -34,9 +34,9 @@ public class Context extends Diagram {
             System.err.println("Hmm, this should not happen!");
             return false;
         }
-        // Now all objects should be mapped
-        for(Morphism x : morphisms) {
-            if(!mapping.maps(x))
+        // Now all morphisms should be mapped
+        for(int i : indices) {
+            if(!mapping.maps(i))
                 return false;
         }
         return true;
@@ -50,16 +50,18 @@ public class Context extends Diagram {
         // Create Mapping from otherData
         Mapping mapping = new Mapping(this, target);
         for (int i = 0; i < data.size(); ++i) {
-            if(!mapping.set(data.get(i), targetData.get(i)))
+            if(!mapping.set(data.get(i), targetData.get(i))) {
+                System.out.println("Could not map ... to ...");
                 return null;
+            }
         }
 
         return mapping;
     }
 
-    protected void replaceMorphism(Morphism x, Morphism y, List<InducedEquality> induced) throws CreationException {
-        super.replaceMorphism(x, y, induced);
-        if (data.contains(x))
-            data.replaceAll(z -> (z == x ? y : z));
-    }
+//    protected void replaceMorphism(Morphism x, Morphism y, List<InducedEquality> induced) throws CreationException {
+//        super.replaceMorphism(x, y, induced);
+//        if (data.contains(x))
+//            data.replaceAll(z -> (z == x ? y : z));
+//    }
 }

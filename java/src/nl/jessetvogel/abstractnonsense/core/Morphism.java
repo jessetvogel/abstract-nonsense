@@ -1,43 +1,28 @@
 package nl.jessetvogel.abstractnonsense.core;
 
 public class Morphism {
-    public Morphism category;
-    public Morphism domain;
-    public Morphism codomain;
-    public boolean covariant;
 
-    Morphism(Morphism category, Morphism domain, Morphism codomain, boolean covariant) {
-        this.category = category;
-        this.domain = domain;
-        this.codomain = codomain;
-        this.covariant = covariant;
+    public final int index;
+    public final int k;
+    public MorphismInfo info;
+
+    Morphism(int index, int k) {
+        this.index = index;
+        this.k = k;
+        info = null;
     }
 
-    Morphism(Morphism category, Morphism domain, Morphism codomain) {
-        this(category, domain, codomain, true);
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof Morphism))
+            return false;
+
+        return index == ((Morphism) o).index && k == ((Morphism) o).k;
     }
 
-    Morphism(Morphism category) {
-        this.category = category;
-        this.domain = this.codomain = this;
-        this.covariant = true;
+    @Override
+    public int hashCode() {
+        return (index << 16) + k;
     }
-
-    public Morphism() {
-        category = domain = codomain = this;
-        covariant = true;
-    }
-
-    public boolean isObject() {
-        return this == domain;
-    }
-
-    public boolean isFunctor() {
-        return category == Global.Cat;
-    }
-
-    public boolean isCategory() {
-        return isObject() && isFunctor();
-    }
-
 }
+

@@ -1,3 +1,4 @@
+# import "/Users/jessevogel/Projects/abstract-nonsense/math/math.txt"
 import "/Users/jessevogel/Projects/abstract-nonsense/math/AG-definitions.txt"
 
 # Define theorems
@@ -28,7 +29,7 @@ theorem T10 {
     use X, Y : Scheme
     for f : X -> Y
     with m_formally_smooth(f), m_locally_finite_presentation(f)
-    then m_smooth(X)
+    then m_smooth(f)
 }
 
 theorem T11 {

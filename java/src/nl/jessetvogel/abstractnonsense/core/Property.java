@@ -4,8 +4,8 @@ public class Property extends Context {
 
     String name;
 
-    public Property(Diagram parent, String name) {
-        super(parent);
+    public Property(Session session, String name) {
+        super(session, session);
         this.name = name;
     }
 
