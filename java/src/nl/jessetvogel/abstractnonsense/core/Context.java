@@ -4,7 +4,7 @@ import java.util.*;
 
 public class Context extends Diagram {
 
-    List<Morphism> data;
+    public final List<Morphism> data;
 
     public Context(Session session, Diagram parent) {
         super(session, parent);
@@ -19,24 +19,25 @@ public class Context extends Diagram {
         return data.contains(x);
     }
 
-    public boolean isValidData(Diagram target, List<Morphism> targetData) {
-        Mapping mapping = mappingFromData(target, targetData);
-        if(mapping == null)
-            return false;
-        return mapping.isValid();
-    }
+//    public boolean isValidData(Diagram target, List<Morphism> targetData) {
+//        Mapping mapping = mappingFromData(target, targetData);
+//        if(mapping == null)
+//            return false;
+//        return mapping.isValid();
+//    }
 
     public boolean isReduced() {
         // Reduced means that every morphism in the context depends on the data
         // An easy check to see if is the case is to try to map the context to itself
         Mapping mapping = mappingFromData(this, data);
-        if(mapping == null || !mapping.isValid()) {
+        if(mapping == null || !mapping.valid()) {
             System.err.println("Hmm, this should not happen!");
             return false;
         }
         // Now all morphisms should be mapped
         for(int i : indices) {
-            if(!mapping.maps(i))
+            Morphism x = session.morphism(i);
+            if(!mapping.determined(x))
                 return false;
         }
         return true;
@@ -50,10 +51,8 @@ public class Context extends Diagram {
         // Create Mapping from otherData
         Mapping mapping = new Mapping(this, target);
         for (int i = 0; i < data.size(); ++i) {
-            if(!mapping.set(data.get(i), targetData.get(i))) {
-                System.out.println("Could not map ... to ...");
+            if(!mapping.put(data.get(i), targetData.get(i)))
                 return null;
-            }
         }
 
         return mapping;
@@ -63,10 +62,9 @@ public class Context extends Diagram {
         return session.signature(data);
     }
 
-
-//    protected void replaceMorphism(Morphism x, Morphism y, List<InducedEquality> induced) throws CreationException {
-//        super.replaceMorphism(x, y, induced);
-//        if (data.contains(x))
-//            data.replaceAll(z -> (z == x ? y : z));
-//    }
+    @Override
+    protected void replaceMorphism(Morphism x, Morphism y, List<MorphismPair> induced) throws Exception {
+        super.replaceMorphism(x, y, induced);
+        data.replaceAll(z -> (z.index == x.index ? new Morphism(y.index, z.k) : z));
+    }
 }

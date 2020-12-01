@@ -6,7 +6,7 @@ import java.util.regex.Pattern;
 
 public class Lexer {
 
-    public static final List<String> KEYWORDS = List.of("equalities", "exit", "import", "id", "dom", "cod", "cat", "let", "assume", "prove", "apply", "property", "theorem", "use", "with", "then", "def", "exists", "check", "debug");
+    public static final List<String> KEYWORDS = List.of("exit", "import", "id", "dom", "cod", "cat", "let", "assume", "prove", "apply", "property", "theorem", "search", "use", "with", "then", "def", "exists", "check", "debug");
     public static final List<String> SEPARATORS = List.of("(", ")", "{", "}", "=", ".", ",", ":", "->", "~>", "=>", "&", "|", ";");
     public static final Pattern PATTERN_NUMBERS = Pattern.compile("^\\d+$");
     public static final Pattern PATTERN_IDENTIFIERS = Pattern.compile("^\\w+$");

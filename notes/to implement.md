@@ -1,7 +1,10 @@
 ### Priority
 
-- ~~`Definition` / aliasing | for `affine(X) <=> X = Spec(Ring(X))`~~
-- ~~Property signatures, so that affine can hold for schemes and scheme morphisms~~
+- Examples!
+  - Context (data, no conditions), Conditional (data, conditions), Theorem (also conclusions)
+  - Mapping : Context -> Diagram
+  
+  
 
 
 
@@ -31,5 +34,8 @@
 
 
 
-- Have `Definitions` ? E.g. `etale(f)` is defined as `formally_etale(f) & locally_finite_presentation(f)`
+- ~~Have `Definitions` ? E.g. `etale(f)` is defined as `formally_etale(f) & locally_finite_presentation(f)`~~
+
+- ~~`Definition` / aliasing | for `affine(X) <=> X = Spec(Ring(X))`~~
+- ~~Property signatures, so that affine can hold for schemes and scheme morphisms~~
 

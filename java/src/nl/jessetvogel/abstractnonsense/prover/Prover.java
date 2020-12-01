@@ -46,7 +46,7 @@ public class Prover {
     }
 
     public void considerGoal(Goal goal) {
-        System.out.println("[We consider the goal " + diagram.str(goal.P) + " with money = " + goal.money + "]");
+        session.print("\uD83D\uDCCC Consider the goal " + diagram.str(goal.P) + " ($" + goal.money + ")");
 
         // If we already know a proof, resolve the goal
         if (goal.P.equals(session.True)) {
@@ -58,7 +58,13 @@ public class Prover {
         if(goal.money == 0)
             return;
 
-        // Get representations
+        // See if any other propositions imply our goal
+        for(Representation rep : diagram.getRepresentations(session.True)) {
+            if(rep.type == Representation.Type.HOM && rep.data.get(1).equals(goal.P))
+                implicationFromConditions(goal, Collections.singletonList(rep.data.get(0)), goal.money - 1);
+        }
+
+        // See if any representation is implied by a theorem
         for(Representation repP : diagram.getRepresentations(goal.P)) {
             // Consider some special cases
             considerAnd(goal, repP);
@@ -98,14 +104,14 @@ public class Prover {
 
     private void considerAnd(Goal goal, Representation rep) {
         if(rep.type == Representation.Type.AND)
-            implicationFromConditions(goal, rep.data, goal.money); // TODO: I think this should be fine
+            implicationFromConditions(goal, rep.data, goal.money);
     }
 
     private void considerOr(Goal goal, Representation rep) {
-//        if(rep.type == Representation.Type.OR) {
-//            implicationFromConditions(goal, rep.data.subList(0, diagram.knowsInstance(rep.data.get(0)) ? 0 : 1), goal.money - 1);
-//            implicationFromConditions(goal, rep.data.subList(1, diagram.knowsInstance(rep.data.get(1)) ? 1 : 2), goal.money - 1);
-//        }
+        if(rep.type == Representation.Type.OR) {
+            implicationFromConditions(goal, rep.data.subList(0, 1), goal.money - 1);
+            implicationFromConditions(goal, rep.data.subList(1, 2), goal.money - 1);
+        }
     }
 
     private void considerImplies(Goal goal, Representation rep) {
@@ -165,7 +171,7 @@ public class Prover {
         int n = r.data.size();
         for (int i = 0; i < n; ++i) {
             Morphism x = r.data.get(i);
-            if (context.owns(x) && !mapping.set(x, s.data.get(i)))
+            if (context.owns(x) && !mapping.put(x, s.data.get(i)))
                 return null;
         }
 

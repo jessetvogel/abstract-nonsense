@@ -1,0 +1,12 @@
+property inj { use A, B : Set let f : A -> B }
+theorem about_inj { use A, B : Set let f : A -> B, x, y : A with inj(f), f(x) = f(y) then x = y }
+
+
+let A, B : Set
+let f : A -> B
+assume inj(f)
+
+let x, y : A
+assume f(x) = f(y)
+
+prove y = x

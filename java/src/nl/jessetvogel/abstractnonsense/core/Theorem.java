@@ -11,8 +11,8 @@ public class Theorem extends Context {
     public Theorem(Session session, String name) {
         super(session, session);
         this.name = name;
-        conditions = new ArrayList<>();
         conclusions = new ArrayList<>();
+        conditions = new ArrayList<>();
     }
 
     public void addCondition(Morphism P) {
@@ -22,10 +22,10 @@ public class Theorem extends Context {
     public void addConclusion(Morphism Q) {
         conclusions.add(Q);
     }
-
+    
     public List<Morphism> apply(Mapping mapping) {
         // Mapping must be valid
-        if (!mapping.isValid())
+        if (!mapping.valid())
             return null;
 
         // See what conditions are already satisfied, and which are not
@@ -108,9 +108,10 @@ public class Theorem extends Context {
 //        return true;
 //    }
 
-//    protected void replaceMorphism(Morphism x, Morphism y, List<InducedEquality> induced) throws CreationException {
-//        super.replaceMorphism(x, y, induced);
-//        if (conditions.contains(x))
-//            conditions.replaceAll(z -> (z == x ? y : z));
-//    }
+    @Override
+    protected void replaceMorphism(Morphism x, Morphism y, List<MorphismPair> induced) throws Exception {
+        super.replaceMorphism(x, y, induced);
+        conditions.replaceAll(z -> (z.index == x.index ? new Morphism(y.index, z.k) : z));
+        conclusions.replaceAll(z -> (z.index == x.index ? new Morphism(y.index, z.k) : z));
+    }
 }

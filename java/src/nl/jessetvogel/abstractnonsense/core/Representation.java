@@ -67,12 +67,24 @@ public class Representation {
         if (obj == null || obj.getClass() != this.getClass())
             return false;
         Representation other = (Representation) obj;
-        return this.type == other.type && this.property == other.property && this.data.equals(other.data);
+
+        if(type != other.type)
+            return false;
+        return switch (type) {
+            case HOM, COMPOSITION, FUNCTOR_APPLICATION -> data.equals(other.data);
+            case EQUALITY, AND, OR -> (data.get(0).equals(other.data.get(0)) && data.get(1).equals(other.data.get(1))) ||
+                    (data.get(0).equals(other.data.get(1)) && data.get(1).equals(other.data.get(0)));
+            case PROPERTY_APPLICATION -> property == other.property && data.equals(other.data);
+        };
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(type, property, data);
+        return switch (type) {
+            case HOM, COMPOSITION, FUNCTOR_APPLICATION -> Objects.hash(type, data);
+            case EQUALITY, AND, OR -> data.get(0).hashCode() ^ data.get(1).hashCode();
+            case PROPERTY_APPLICATION -> Objects.hash(type, property, data);
+        };
     }
 
 }

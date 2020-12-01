@@ -1,6 +1,7 @@
 package nl.jessetvogel.abstractnonsense.parser;
 
 import nl.jessetvogel.abstractnonsense.core.*;
+import nl.jessetvogel.abstractnonsense.prover.Exampler;
 import nl.jessetvogel.abstractnonsense.prover.Prover;
 
 import java.io.FileInputStream;
@@ -55,10 +56,16 @@ public class Parser {
         }
     }
 
-    public void parse() throws IOException, LexerException, ParserException {
-        while (!found(Token.Type.EOF))
+    public boolean parse() throws IOException, LexerException, ParserException {
+        while (!found(Token.Type.EOF)) {
             parseStatement(session);
+            if(session.contradiction()) {
+                session.print("\u26A1 Contradiction!");
+                return false;
+            }
+        }
         consume(Token.Type.EOF);
+        return true;
     }
 
     // -------- Parse Functions ------------
@@ -68,29 +75,21 @@ public class Parser {
                 ; |
                 exit |
                 import STRING |
+                check MORPHISM |
                 let LIST_OF_IDENTIFIERS : TYPE |
                 assume LIST_OF_MORPHISMS |
                 prove MORPHISM |
                 apply IDENTIFIER ( LIST_OF_MORPHISMS ) |
                 property LIST_OF_IDENTIFIERS { IMPLICITS GIVENS (def MORPHISM)? } |
                 theorem IDENTIFIER { IMPLICITS GIVENS CONDITIONS CONCLUSIONS } |
-                check MORPHISM
+                search { <.. context ..> }
+
          */
 
         if (found(Token.Type.SEPARATOR, ";")) {
             consume();
             return;
         }
-
-//        if(found(Token.Type.KEYWORD, "equalities")) {
-//            consume();
-//            try {
-//                session.resolveEqualities();
-//            } catch (CreationException e) {
-//                e.printStackTrace();
-//            }
-//            return;
-//        }
 
         if (found(Token.Type.KEYWORD, "exit")) {
             consume();
@@ -104,6 +103,16 @@ public class Parser {
             Scanner scanner = new Scanner(new FileInputStream(path));
             Lexer lexer = new Lexer(scanner);
             (new Parser(lexer, session)).parse();
+            return;
+        }
+
+        if (found(Token.Type.KEYWORD, "check")) {
+            consume();
+            Morphism f = parseMorphism(session);
+            if(f.k == 0)
+                session.print("[" + f.index + "] " + session.str(f) + " : " + session.str(session.cat(f)));
+            else
+                session.print("[" + f.index + "] " + session.str(f) + " : " + session.str(session.dom(f)) + " -> " + session.str(session.cod(f)) + " (" + f.k + "-morphism in " + session.str(session.cat(f)));
             return;
         }
 
@@ -136,6 +145,7 @@ public class Parser {
                     session.identify(P, session.True);
                 }
                 catch(Exception e) {
+                    e.printStackTrace();
                     throw new ParserException(tAssume, "Failed to assume: " + e.getMessage());
                 }
             }
@@ -150,9 +160,9 @@ public class Parser {
                 throw new ParserException(tProve, "Prove requires a Proposition");
             Prover prover = new Prover(session, session);
             if (prover.prove(P, 10))
-                System.out.println("Proven!");
+                session.print("\uD83C\uDF89 Proven!");
             else
-                System.out.println("Could not prove");
+                session.print("\uD83E\uDD7A Could not prove..");
             return;
         }
 
@@ -167,14 +177,13 @@ public class Parser {
             Mapping mapping = thm.mappingFromData(session, parseListOfMorphisms(session));
             consume(Token.Type.SEPARATOR, ")");
 
-            List<Morphism> result = thm.apply(mapping);
+            List<Morphism> result = null;
+            if(mapping != null)
+                result = thm.apply(mapping);
             if (result == null)
-                System.out.println("Could not apply theorem");
-            else if (result.isEmpty())
-                System.out.println("Theorem applied successfully");
-            else
-                System.out.println("The following conditions must be satisfied: " + session.strList(result));
-
+                session.print("\u2757 Theorem does not apply to given data");
+            else if (!result.isEmpty())
+                session.print("\uD83D\uDCA1 The following conditions must be satisfied: " + session.strList(result));
             return;
         }
 
@@ -229,15 +238,23 @@ public class Parser {
             return;
         }
 
-        if (found(Token.Type.KEYWORD, "check")) {
+        if(found(Token.Type.KEYWORD, "search")) {
             consume();
-            Morphism x = parseMorphism(session);
-            if(x.k == 0)
-                System.out.printf("%s : %s%n", session.str(x), session.str(session.cat(x)));
-            else
-                System.out.printf("%s : %s -> %s (%d-morphism in %s)%n", session.str(x), session.str(session.dom(x)), session.str(session.cod(x)), x.k, session.str(session.cat(x)));
+            Context context = new Context(session, session);
+            consume(Token.Type.SEPARATOR, "{");
+            parseImplicits(context);
+            parseGivens(context);
+            parseAssumptions(context);
+            consume(Token.Type.SEPARATOR, "}");
+
+            Exampler ex = new Exampler(session, context);
+            ex.search();
+            context.detach();
+
             return;
         }
+
+        // -- FOR DEBUGGING --
 
         if (found(Token.Type.KEYWORD, "debug")) {
             List<Integer> list = new ArrayList<>(session.indices);
@@ -245,14 +262,14 @@ public class Parser {
                 if(session.nCat.contains(index))
                     continue;
 
-                Morphism x = session.morphism(index);
-                if(x == null)
+                Morphism f = session.morphism(index);
+                if(f == null)
                     continue;
 
-                if(x.k == 0)
-                    System.out.printf("%s : %s%n", session.str(x), session.str(session.cat(x)));
+                if(f.k == 0)
+                    session.print("[" + f.index + "] " + session.str(f) + " : " + session.str(session.cat(f)));
                 else
-                    System.out.printf("%s : %s -> %s (%d-morphism in %s)%n", session.str(x), session.str(session.dom(x)), session.str(session.cod(x)), x.k, session.str(session.cat(x)));
+                    session.print("[" + f.index + "] " + session.str(f) + " : " + session.str(session.dom(f)) + " -> " + session.str(session.cod(f)) + " (" + f.k + "-morphism in " + session.str(session.cat(f)));
             }
 
             consume();
@@ -331,11 +348,35 @@ public class Parser {
                 with LIST_OF_MORPHISMS
          */
 
-        Token t = consume(Token.Type.KEYWORD, "with");
+        if(!found(Token.Type.KEYWORD, "with"))
+            return;
+
+        Token t = consume();
         for(Morphism P : parseListOfMorphisms(theorem)) {
             if (!session.cat(P).equals(session.Prop))
                 throw new ParserException(t, "Condition must be a Proposition");
             theorem.addCondition(P);
+        }
+    }
+
+    private void parseAssumptions(Context context) throws ParserException, IOException, LexerException {
+        /*  ASSUMPTIONS =
+                with LIST_OF_MORPHISMS
+         */
+
+        if(!found(Token.Type.KEYWORD, "with"))
+            return;
+
+        Token t = consume();
+        for(Morphism P : parseListOfMorphisms(context)) {
+            if (!session.cat(P).equals(session.Prop))
+                throw new ParserException(t, "Assumption must be a Proposition");
+            try {
+                session.identify(P, session.True);
+            }
+            catch (Exception e) {
+                throw new ParserException(t, e.getMessage());
+            }
         }
     }
 

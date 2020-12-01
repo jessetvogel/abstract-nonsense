@@ -9,8 +9,8 @@ public class Diagram {
     private final List<Diagram> children;
 
     public final List<Integer> indices;
+    public final Map<Representation, Morphism> representations;
     private final Map<String, Morphism> symbols;
-    final Map<Representation, Morphism> representations;
 
     Diagram(Session session, Diagram parent) {
         this.session = (session != null ? session : (Session) this);
@@ -65,6 +65,10 @@ public class Diagram {
 
     public boolean owns(Morphism f) {
         return indices.contains(f.index);
+    }
+
+    public boolean owns(int index) {
+        return indices.contains(index);
     }
 
     private boolean ownsAny(List<Morphism> list) {
@@ -153,7 +157,7 @@ public class Diagram {
 
         // The data should fit in the context of the property
         Mapping mapping = property.context.mappingFromData(this, data);
-        if(mapping == null || !mapping.isValid())
+        if(mapping == null || !mapping.valid())
             throw new CreationException("Property does not apply to the given data");
 
         // Create representation
@@ -352,9 +356,9 @@ public class Diagram {
                 case EQUALITY -> createEquality(mapping.map(rep.data.get(0)), mapping.map(rep.data.get(1)));
                 case AND -> createAnd(mapping.map(rep.data.get(0)), mapping.map(rep.data.get(1)));
                 case OR -> createOr(mapping.map(rep.data.get(0)), mapping.map(rep.data.get(1)));
-                case COMPOSITION -> createComposition(mapping.mapList(rep.data));
+                case COMPOSITION -> createComposition(mapping.map(rep.data));
                 case FUNCTOR_APPLICATION -> createFunctorApplication(mapping.map(rep.data.get(0)), mapping.map(rep.data.get(1)));
-                case PROPERTY_APPLICATION -> createPropertyApplication(rep.property, mapping.mapList(rep.data));
+                case PROPERTY_APPLICATION -> createPropertyApplication(rep.property, mapping.map(rep.data));
             };
         }
         else {
@@ -399,7 +403,8 @@ public class Diagram {
         }
 
         // If a representation contains x as data, recreate it
-        for (Iterator<Map.Entry<Representation, Morphism>> it = representations.entrySet().iterator(); it.hasNext(); ) {
+        Set<Map.Entry<Representation, Morphism>> reps = new HashSet<>(representations.entrySet()); // Make a copy, because we create representations in this loop as well, but they need not be considered!
+        for (Iterator<Map.Entry<Representation, Morphism>> it = reps.iterator(); it.hasNext(); ) {
             Map.Entry<Representation, Morphism> entry = it.next();
             Representation rep = entry.getKey();
 
@@ -414,7 +419,7 @@ public class Diagram {
                 continue;
 
             it.remove();
-            rep.data.replaceAll(z -> (z == x ? y : z));
+            rep.data.replaceAll(z -> (z.equals(x) ? y : z));
             Morphism z = createFromRepresentation(rep);
             induced.add(new MorphismPair(entry.getValue(), z));
         }
@@ -427,13 +432,16 @@ public class Diagram {
     // ------------ Stringify ------------
 
     public String strList(List<Morphism> list) {
+        return strList(list, ", ");
+    }
+
+    public String strList(List<Morphism> list, String delimiter) {
         if(list.isEmpty())
             return "";
-        StringBuilder s = new StringBuilder();
+        StringJoiner sj = new StringJoiner(delimiter);
         for (Morphism x : list)
-            s.append(str(x)).append(",");
-        s.deleteCharAt(s.length() - 1);
-        return s.toString();
+            sj.add(str(x));
+        return sj.toString();
     }
 
     public String str(Morphism x) {
@@ -453,7 +461,7 @@ public class Diagram {
                     case EQUALITY -> str(rep.data.get(0)) + " = " + str(rep.data.get(1));
                     case AND -> str(rep.data.get(0)) + " & " + str(rep.data.get(1));
                     case OR -> str(rep.data.get(0)) + " | " + str(rep.data.get(1));
-                    case COMPOSITION -> strList(rep.data).replaceAll(",", ".");
+                    case COMPOSITION -> strList(rep.data, ".");
                     case FUNCTOR_APPLICATION -> str(rep.data.get(0)) + "(" + str(rep.data.get(1)) + ")";
                     case PROPERTY_APPLICATION -> rep.property.name + "(" + strList(rep.data) + ")";
                 };
@@ -463,7 +471,7 @@ public class Diagram {
         if (hasParent() && !owns(x))
             return parent.str(x);
 
-        return "?";
+        return "[" + x.index + "]";
     }
 
     protected void addIndex(int index) {
@@ -474,15 +482,4 @@ public class Diagram {
         indices.remove(index);
     }
 
-//    protected class InducedEquality {
-//
-//        final Diagram diagram;
-//        final Morphism x, y;
-//
-//        InducedEquality(Diagram diagram, Morphism x, Morphism y) {
-//            this.diagram = diagram;
-//            this.x = x;
-//            this.y = y;
-//        }
-//    }
 }
