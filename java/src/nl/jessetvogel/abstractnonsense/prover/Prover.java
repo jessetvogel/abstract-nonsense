@@ -115,6 +115,7 @@ public class Prover {
     }
 
     private void considerImplies(Goal goal, Representation rep) {
+        // TODO
 //        if(rep.property == Global.Implies)
 //            implicationFromConditions(goal, rep.data.subList(1, diagram.knowsInstance(rep.data.get(1)) ? 1 : 2), goal.money - 1);
     }
@@ -147,7 +148,8 @@ public class Prover {
     private void considerTheoremPartialMapping(Goal goal, Theorem thm, Mapping mapping) {
         // Search for possible mappings, and consider them all
         List<Mapping> mappings = new ArrayList<>();
-        mapping.search(mappings);
+        Searcher searcher = new Searcher(mapping);
+        searcher.search(mappings);
         for(Mapping m : mappings)
             considerTheorem(goal, thm, m);
     }
@@ -171,7 +173,7 @@ public class Prover {
         int n = r.data.size();
         for (int i = 0; i < n; ++i) {
             Morphism x = r.data.get(i);
-            if (context.owns(x) && !mapping.put(x, s.data.get(i)))
+            if (context.owns(x) && !mapping.set(x, s.data.get(i)))
                 return null;
         }
 

@@ -1,10 +1,18 @@
 ### Priority
 
-- Examples!
-  - Context (data, no conditions), Conditional (data, conditions), Theorem (also conclusions)
-  - Mapping : Context -> Diagram
+- ~~Examples!~~
+  - ~~Context (data, no conditions), Conditional (data, conditions), Theorem (also conclusions)~~
+  - ~~Mapping : Context -> Diagram~~
   
-  
+
+
+
+
+
+- How to deal with modules? Cannot do `Mod : Ring -> Cat` anymore since `Ring` is a 1-category and `Cat` a 2-category.
+  - Maybe generalize `Property` to yield n-Categories instead of only (-1)-Categories (`Prop`'s)
+    - `class Property { String name; Diagram diagram; int n; }` -- application creates an $n$-category
+    - But why stop there? We can replace `int n` by `Morphism cat;` which creates an object in the (mapped) `cat`.
 
 
 
@@ -31,6 +39,7 @@
 - How to prove `P => Q` statements, and how to prove `P | Q` statements?
   - Option 1: Make `Prover` a `Diagram`, where additional hypotheses can be made. Then `P => Q` can be proven by assuming `P` (i.e. creating another Prover on top of this, and try to prove P) over there.
   - Option 2: Heyting algebra approach
+  - Option 3: strategies for particular cases: looks like option 2, but a bit different
 
 
 

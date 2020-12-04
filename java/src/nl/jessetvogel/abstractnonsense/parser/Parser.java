@@ -52,7 +52,7 @@ public class Parser {
             currentToken = null;
             return token;
         } else {
-            throw new ParserException(currentToken, String.format("Expected %s (%s) but found %s (%s)", data, type, currentToken.data, currentToken.type));
+            throw new ParserException(currentToken, String.format("Expected %s (%s) but found %s (%s)", data != null ? data : "\b", type, currentToken.data != null ? currentToken.data : "\b", currentToken.type));
         }
     }
 
@@ -82,7 +82,8 @@ public class Parser {
                 apply IDENTIFIER ( LIST_OF_MORPHISMS ) |
                 property LIST_OF_IDENTIFIERS { IMPLICITS GIVENS (def MORPHISM)? } |
                 theorem IDENTIFIER { IMPLICITS GIVENS CONDITIONS CONCLUSIONS } |
-                search { <.. context ..> }
+                example IDENTIFIER { IMPLICITS GIVENS ASSUMPTIONS } |
+                search { IMPLICITS GIVENS ASSUMPTIONS }
 
          */
 
@@ -109,10 +110,12 @@ public class Parser {
         if (found(Token.Type.KEYWORD, "check")) {
             consume();
             Morphism f = parseMorphism(session);
+            String type;
             if(f.k == 0)
-                session.print("[" + f.index + "] " + session.str(f) + " : " + session.str(session.cat(f)));
+                type = session.str(session.cat(f));
             else
-                session.print("[" + f.index + "] " + session.str(f) + " : " + session.str(session.dom(f)) + " -> " + session.str(session.cod(f)) + " (" + f.k + "-morphism in " + session.str(session.cat(f)));
+                type = session.str(session.dom(f)) + " -> " + session.str(session.cod(f)) + " (" + f.k + "-morphism in " + session.str(session.cat(f));
+            session.print(session.str(f) + " : " + type + " (index " + f.index + ")");
             return;
         }
 
@@ -195,6 +198,7 @@ public class Parser {
             consume(Token.Type.SEPARATOR, "{");
             parseImplicits(context);
             parseGivens(context);
+            parseWrites(context);
 
             Morphism definition = null;
             if(found(Token.Type.KEYWORD, "def")) {
@@ -215,7 +219,6 @@ public class Parser {
                 Property property = new Property(context, name, definition);
                 session.addProperty(property);
             }
-
             return;
         }
 
@@ -229,6 +232,7 @@ public class Parser {
             consume(Token.Type.SEPARATOR, "{");
             parseImplicits(thm);
             parseGivens(thm);
+            parseWrites(thm);
             parseConditions(thm);
             if (!thm.isReduced())
                 throw new ParserException(tIdentifier, "Theorem context contains morphisms that do not depend on the data");
@@ -238,19 +242,38 @@ public class Parser {
             return;
         }
 
+        if(found(Token.Type.KEYWORD, "example")) {
+            Token tExample = consume();
+            String name = consume(Token.Type.IDENTIFIER).data;
+
+            if(session.hasExample(name))
+                throw new ParserException(tExample, "Example name " + name + " already used");
+
+            Diagram example = new Diagram(session, session);
+            consume(Token.Type.SEPARATOR, "{");
+            parseImplicits(example);
+            parseGivens(example);
+            parseWrites(example);
+            parseAssumptions(example);
+            consume(Token.Type.SEPARATOR, "}");
+
+            session.addExample(name, example);
+            return;
+        }
+
         if(found(Token.Type.KEYWORD, "search")) {
             consume();
             Context context = new Context(session, session);
             consume(Token.Type.SEPARATOR, "{");
             parseImplicits(context);
             parseGivens(context);
+            parseWrites(context);
             parseAssumptions(context);
             consume(Token.Type.SEPARATOR, "}");
 
             Exampler ex = new Exampler(session, context);
             ex.search();
             context.detach();
-
             return;
         }
 
@@ -259,10 +282,15 @@ public class Parser {
         if (found(Token.Type.KEYWORD, "debug")) {
             List<Integer> list = new ArrayList<>(session.indices);
             for (int index : list) {
+                // Do not display categories of n-categories
                 if(session.nCat.contains(index))
                     continue;
 
-                Morphism f = session.morphism(index);
+                // Because we do not know which k to expect..
+                Morphism f = null;
+                int k = -1;
+                while(f == null && k < 3)
+                    f = session.morphism(index, ++k);
                 if(f == null)
                     continue;
 
@@ -279,7 +307,7 @@ public class Parser {
         throw new ParserException(currentToken, "Unable to parse statement (" + currentToken.data + ")");
     }
 
-    private void parseImplicits(Context context) throws ParserException, IOException, LexerException {
+    private void parseImplicits(Diagram diagram) throws ParserException, IOException, LexerException {
         /*  IMPLICITS =
                 use LIST_OF_IDENTIFIERS : TYPE ( , LIST_OF_IDENTIFIERS : TYPE )*
          */
@@ -291,25 +319,25 @@ public class Parser {
             consume();
             Token t = currentToken;
             List<String> identifiers = parseListOfIdentifiers();
-            for (String i : identifiers) {
-                if (context.hasSymbol(i))
-                    throw new ParserException(t, "Symbol " + i + " is already used");
+            for (String sym : identifiers) {
+                if (diagram.hasSymbol(sym))
+                    throw new ParserException(t, "Symbol " + sym + " is already used");
             }
             consume(Token.Type.SEPARATOR, ":");
-            Morphism type = parseMorphism(context);
-            for (String i : identifiers) {
-                Morphism x = null;
+            Morphism type = parseMorphism(diagram);
+            for (String sym : identifiers) {
+                Morphism f = null;
                 try {
-                    x = session.createObject(context, type);
+                    f = session.createObject(diagram, type);
                 } catch (CreationException e) {
                     e.printStackTrace();
                 }
-                context.assignSymbol(i, x);
+                diagram.assignSymbol(sym, f);
             }
         }
     }
 
-    private void parseGivens(Context context) throws ParserException, IOException, LexerException {
+    private void parseGivens(Diagram diagram) throws ParserException, IOException, LexerException {
         /*  GIVENS =
                 let LIST_OF_IDENTIFIERS : TYPE ( , LIST_OF_IDENTIFIERS : TYPE )*
          */
@@ -325,21 +353,42 @@ public class Parser {
             List<String> identifiers = parseListOfIdentifiers();
             Token t = currentToken;
             for (String i : identifiers) {
-                if (context.hasSymbol(i))
+                if (diagram.hasSymbol(i))
                     throw new ParserException(t, "Symbol " + i + " is already used");
             }
             consume(Token.Type.SEPARATOR, ":");
-            Morphism type = parseMorphism(context);
-            for (String i : identifiers) {
-                Morphism x = null;
+            Morphism type = parseMorphism(diagram);
+            for (String sym : identifiers) {
+                Morphism f = null;
                 try {
-                    x = session.createObject(context, type);
+                    f = session.createObject(diagram, type);
                 } catch (CreationException e) {
                     e.printStackTrace();
                 }
-                context.addData(x);
-                context.assignSymbol(i, x);
+                if(diagram instanceof Context)
+                    ((Context) diagram).addData(f);
+                diagram.assignSymbol(sym, f);
             }
+        }
+    }
+
+    private void parseWrites(Diagram diagram) throws ParserException, IOException, LexerException {
+        /*  WRITES =
+                write IDENTIFIER = MORPHISM ( , IDENTIFIER = MORPHISM )*
+         */
+
+        boolean first = true;
+        while (first ? found(Token.Type.KEYWORD, "write") : found(Token.Type.SEPARATOR, ",")) {
+            first = false;
+
+            consume();
+            Token tIdentifier = consume(Token.Type.IDENTIFIER);
+            String name = tIdentifier.data;
+            if (diagram.hasSymbol(name))
+                throw new ParserException(tIdentifier, "Symbol " + name + " has already been used");
+            consume(Token.Type.SEPARATOR, "=");
+            Morphism f = parseMorphism(diagram);
+            diagram.assignSymbol(name, f);
         }
     }
 
@@ -359,7 +408,7 @@ public class Parser {
         }
     }
 
-    private void parseAssumptions(Context context) throws ParserException, IOException, LexerException {
+    private void parseAssumptions(Diagram diagram) throws ParserException, IOException, LexerException {
         /*  ASSUMPTIONS =
                 with LIST_OF_MORPHISMS
          */
@@ -368,7 +417,7 @@ public class Parser {
             return;
 
         Token t = consume();
-        for(Morphism P : parseListOfMorphisms(context)) {
+        for(Morphism P : parseListOfMorphisms(diagram)) {
             if (!session.cat(P).equals(session.Prop))
                 throw new ParserException(t, "Assumption must be a Proposition");
             try {
@@ -417,6 +466,7 @@ public class Parser {
                 NUMBER |
                 IDENTIFIER \( LIST_OF_MORPHISMS \) |
                 IDENTIFIER |
+                ~ MORPHISM |
                 MORPHISM \( LIST_OF_MORPHISMS \) |
                 MORPHISM . MORPHISM |
                 MORPHISM -> MORPHISM |
@@ -426,17 +476,17 @@ public class Parser {
                 ... more?
          */
 
-        Morphism x = null;
+        Morphism f = null;
 
         if (found(Token.Type.SEPARATOR, "(")) {
             consume();
-            x = parseMorphism(diagram);
+            f = parseMorphism(diagram);
             consume(Token.Type.SEPARATOR, ")");
         } else if (found(Token.Type.KEYWORD, "id")) {
             Token tId = consume();
             consume(Token.Type.SEPARATOR, "(");
             try {
-                x = session.id(parseMorphism(diagram));
+                f = session.id(parseMorphism(diagram));
             } catch (CreationException e) {
                 throw new ParserException(tId, e.getMessage());
             }
@@ -444,30 +494,30 @@ public class Parser {
         } else if (found(Token.Type.KEYWORD, "dom")) {
             consume();
             consume(Token.Type.SEPARATOR, "(");
-            x = session.dom(parseMorphism(diagram));
+            f = session.dom(parseMorphism(diagram));
             consume(Token.Type.SEPARATOR, ")");
         } else if (found(Token.Type.KEYWORD, "cod")) {
             consume();
             consume(Token.Type.SEPARATOR, "(");
-            x = session.cod(parseMorphism(diagram));
+            f = session.cod(parseMorphism(diagram));
             consume(Token.Type.SEPARATOR, ")");
         } else if (found(Token.Type.KEYWORD, "cat")) {
             consume();
             consume(Token.Type.SEPARATOR, "(");
-            x = session.cat(parseMorphism(diagram));
+            f = session.cat(parseMorphism(diagram));
             consume(Token.Type.SEPARATOR, ")");
 //        } else if (found(Token.Type.NUMBER)) {
 //            Token tNumber = consume();
-//            x = diagram.createNumber(Integer.parseInt(tNumber.data));
+//            f = diagram.createNumber(Integer.parseInt(tNumber.data));
         } else if (found(Token.Type.IDENTIFIER)) {
             Token tIdentifier = consume();
             String name = tIdentifier.data;
 
             // Try to interpret name as a symbol in session
-            x = diagram.getMorphism(name);
+            f = diagram.getMorphism(name);
 
             // If failed, interpret as property or definition
-            if (x == null) {
+            if (f == null) {
                 if(found(Token.Type.SEPARATOR, "(")) {
                     consume(Token.Type.SEPARATOR, "(");
                     List<Morphism> data = parseListOfMorphisms(diagram);
@@ -480,7 +530,7 @@ public class Parser {
                         throw new ParserException(tIdentifier, "No property " + name + " with signature " + signature);
 
                     try {
-                        x = diagram.createPropertyApplication(property, data);
+                        f = diagram.createPropertyApplication(property, data);
                     } catch (CreationException e) {
                         throw new ParserException(tIdentifier, e.getMessage());
                     }
@@ -489,21 +539,31 @@ public class Parser {
                     throw new ParserException(tIdentifier, "Unknown identifier " + name);
                 }
             }
+        } else if(found(Token.Type.SEPARATOR, "~")) {
+            Token tNegation = consume();
+            Morphism g = parseMorphism(diagram);
+            if(!session.cat(g).equals(session.Prop))
+                throw new ParserException(tNegation, "Can only negate propositions");
+            try {
+                f = diagram.createHom(g, session.False);
+            } catch (CreationException e) {
+                throw new ParserException(tNegation, e.getMessage());
+            }
         }
 
-        if (x == null)
+        if (f == null)
             throw new ParserException(currentToken, "Expected an object or morphism");
 
-        // Now we have some x, see if we can (possibly) extend it!
+        // Now we have some f, see if we can (possibly) extend it!
         // This seems to be the solution to left-recursive patterns
 
         while (true) {
             if (found(Token.Type.SEPARATOR, "(")) {
                 Token tBracket = consume();
-                Morphism y = parseMorphism(diagram);
+                Morphism g = parseMorphism(diagram);
                 consume(Token.Type.SEPARATOR, ")");
                 try {
-                    x = diagram.createFunctorApplication(x, y);
+                    f = diagram.createFunctorApplication(f, g);
                 } catch (CreationException e) {
                     throw new ParserException(tBracket, e.getMessage());
                 }
@@ -512,12 +572,12 @@ public class Parser {
 
             if (found(Token.Type.SEPARATOR, ".")) {
                 consume();
-                Morphism y = parseMorphism(diagram);
+                Morphism g = parseMorphism(diagram);
                 List<Morphism> fList = new ArrayList<>();
-                fList.add(x);
-                fList.add(y);
+                fList.add(f);
+                fList.add(g);
                 try {
-                    x = diagram.createComposition(fList);
+                    f = diagram.createComposition(fList);
                 } catch (CreationException e) {
                     e.printStackTrace();
                 }
@@ -526,16 +586,16 @@ public class Parser {
 
             if (found(Token.Type.SEPARATOR, "&") || found(Token.Type.SEPARATOR, "|") || found(Token.Type.SEPARATOR, "->") || found(Token.Type.SEPARATOR, "=")) {
                 Token t = consume();
-                Morphism y = parseMorphism(diagram);
+                Morphism g = parseMorphism(diagram);
                 try {
                     if (t.data.equals("&"))
-                        x = diagram.createAnd(x, y);
+                        f = diagram.createAnd(f, g);
                     if (t.data.equals("|"))
-                        x = diagram.createOr(x, y);
+                        f = diagram.createOr(f, g);
                     if (t.data.equals("->"))
-                        x = diagram.createHom(x, y);
+                        f = diagram.createHom(f, g);
                     if (t.data.equals("="))
-                        x = diagram.createEquality(x, y);
+                        f = diagram.createEquality(f, g);
                 } catch (CreationException e) {
                     throw new ParserException(t, e.getMessage());
                 }
@@ -545,7 +605,7 @@ public class Parser {
             break;
         }
 
-        return x;
+        return f;
     }
 
     private List<Morphism> parseListOfMorphisms(Diagram diagram) throws ParserException, IOException, LexerException {
@@ -564,23 +624,4 @@ public class Parser {
         return morphisms;
     }
 
-    private static class MorphismType {
-
-        boolean isObject;
-        Morphism category, domain, codomain;
-        boolean covariant;
-
-        MorphismType(Morphism category) {
-            isObject = true;
-            this.category = category;
-        }
-
-        MorphismType(Morphism domain, Morphism codomain, boolean covariant) {
-            isObject = false;
-            this.domain = domain;
-            this.codomain = codomain;
-            this.covariant = covariant;
-        }
-
-    }
 }

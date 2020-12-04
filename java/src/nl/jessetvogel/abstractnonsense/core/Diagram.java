@@ -12,7 +12,7 @@ public class Diagram {
     public final Map<Representation, Morphism> representations;
     private final Map<String, Morphism> symbols;
 
-    Diagram(Session session, Diagram parent) {
+    public Diagram(Session session, Diagram parent) {
         this.session = (session != null ? session : (Session) this);
         this.parent = parent;
 
@@ -30,8 +30,12 @@ public class Diagram {
             parent.children.remove(this);
     }
 
-    boolean hasParent() {
+    public boolean hasParent() {
         return parent != null;
+    }
+
+    public Diagram getParent() {
+        return parent;
     }
 
     public void assignSymbol(String name, Morphism x) {
@@ -290,53 +294,65 @@ public class Diagram {
         return R;
     }
 
-    public Morphism createHom(Morphism X, Morphism Y) throws CreationException {
+    public Morphism createHom(Morphism f, Morphism g) throws CreationException {
         // Check if parent should create this instead
-        if (hasParent() && !owns(X) && !owns(Y))
-            return parent.createHom(X, Y);
+        if (hasParent() && !owns(f) && !owns(g))
+            return parent.createHom(f, g);
 
-        // X and Y must be comparable
-        if(!session.comparable(X, Y))
+        // f and g must be comparable
+        if(!session.comparable(f, g))
             throw new CreationException("given morphisms are not comparable");
 
         // Special cases
-        if(session.cat(X).equals(session.Prop)) {
-            if(X.equals(session.True))
-                return Y;
-            if(Y.equals(session.True))
+        if(session.cat(f).equals(session.Prop)) {
+            if(f.equals(session.True))
+                return g;
+            if(g.equals(session.True))
                 return session.True;
-            if(Y.equals(X))
+            if(g.equals(f))
                 return session.True;
         }
 
         // Check if the representation already exists in the diagram, and if so, return the morphism it points to
-        Representation rep = Representation.createHom(X, Y);
+        Representation rep = Representation.createHom(f, g);
         if (representations.containsKey(rep))
             return representations.get(rep);
 
         // Create morphism
-        Morphism H = session.createObject(this, session.nCat(session.degree(X)));
-        representations.put(rep, H);
-        session.setHom(H.index, X, Y); // Sort of workaround, don't know how to do it cleaner
-        return H;
+        int n = session.degree(f);
+        Morphism h = session.createObject(this, session.nCat(session.degree(f)));
+        representations.put(rep, h);
+        if(n >= 0)
+            session.setHom(h.index, f, g); // Sort of workaround, don't know how to do it cleaner
+
+        // If g = False, we are talking about a negation: automatically set ~~P = P
+        if(g.equals(session.False)) {
+            Representation rep_neg = Representation.createHom(h, session.False);
+            if(!representations.containsKey(rep_neg))
+                representations.put(rep_neg, f);
+            else
+                session.identify(representations.get(rep_neg), f); // TODO: this might fail..
+        }
+
+        return h;
     }
 
-    public Morphism createEquality(Morphism x, Morphism y) throws CreationException {
+    public Morphism createEquality(Morphism f, Morphism g) throws CreationException {
         // Check if parent should create this instead
-        if (hasParent() && !owns(x) && !owns(y))
-            return parent.createEquality(x, y);
+        if (hasParent() && !owns(f) && !owns(g))
+            return parent.createEquality(f, g);
 
         // Check if the representation already exists in the diagram, and if so, return the morphism it points to
-        Representation rep = Representation.createEquality(x, y);
+        Representation rep = Representation.createEquality(f, g);
         if (representations.containsKey(rep))
             return representations.get(rep);
 
-        // x and y must have same domain and codomain in the same category
-        if(!session.dom(x).equals(session.dom(y)) || !session.cod(x).equals(session.cod(y)))
+        // f and g must have same domain and codomain in the same category
+        if(!session.comparable(f, g))
             throw new CreationException("Given morphisms are incomparable");
 
         // Special case
-        if(x.equals(y))
+        if(f.equals(g))
             return session.True;
 
         // Create proposition
@@ -387,30 +403,28 @@ public class Diagram {
 //    }
 //
 
-    protected void replaceMorphism(Morphism x, Morphism y, List<MorphismPair> induced) throws Exception {
+    protected void replaceMorphism(Morphism f, Morphism g, List<MorphismPair> induced) throws CreationException {
         // Replace symbol pointers
         for (Map.Entry<String, Morphism> entry : symbols.entrySet()) {
-            Morphism f = entry.getValue();
-            if(f.index == x.index)
-                entry.setValue(new Morphism(y.index, f.k));
+            Morphism h = entry.getValue();
+            if(h.index == f.index)
+                entry.setValue(new Morphism(g.index, h.k));
         }
 
         // Replace representation pointers
         for (Map.Entry<Representation, Morphism> entry : representations.entrySet()) {
-            Morphism f = entry.getValue();
-            if(f.index == x.index)
-                entry.setValue(new Morphism(y.index, f.k));
+            Morphism h = entry.getValue();
+            if(h.index == f.index)
+                entry.setValue(new Morphism(g.index, h.k));
         }
 
-        // If a representation contains x as data, recreate it
-        Set<Map.Entry<Representation, Morphism>> reps = new HashSet<>(representations.entrySet()); // Make a copy, because we create representations in this loop as well, but they need not be considered!
-        for (Iterator<Map.Entry<Representation, Morphism>> it = reps.iterator(); it.hasNext(); ) {
-            Map.Entry<Representation, Morphism> entry = it.next();
+        // If a representation contains f as data, recreate it
+        for (Map.Entry<Representation, Morphism> entry : new HashSet<>(representations.entrySet())) {
             Representation rep = entry.getKey();
 
-            boolean flag = false;
-            for(Morphism f : rep.data) {
-                if(f.index == x.index) {
+            boolean flag = false; // TODO: Can this be shortened?
+            for(Morphism h : rep.data) {
+                if(h.index == f.index) {
                     flag = true;
                     break;
                 }
@@ -418,15 +432,15 @@ public class Diagram {
             if(!flag)
                 continue;
 
-            it.remove();
-            rep.data.replaceAll(z -> (z.equals(x) ? y : z));
-            Morphism z = createFromRepresentation(rep);
-            induced.add(new MorphismPair(entry.getValue(), z));
+            representations.remove(rep);
+            rep.data.replaceAll(h -> (h.equals(f) ? g : h));
+            Morphism h = createFromRepresentation(rep);
+            induced.add(new MorphismPair(entry.getValue(), h));
         }
 
         // Also make replacements in children
         for (Diagram child : children)
-            child.replaceMorphism(x, y, induced);
+            child.replaceMorphism(f, g, induced);
     }
 
     // ------------ Stringify ------------
@@ -457,7 +471,7 @@ public class Diagram {
             if (entry.getValue().equals(x)) {
                 Representation rep = entry.getKey();
                 return switch (rep.type) {
-                    case HOM -> str(rep.data.get(0)) + " -> " + str(rep.data.get(1));
+                    case HOM -> rep.data.get(1).equals(session.False) ? "~" + str(rep.data.get(0)) : (str(rep.data.get(0)) + " -> " + str(rep.data.get(1)));
                     case EQUALITY -> str(rep.data.get(0)) + " = " + str(rep.data.get(1));
                     case AND -> str(rep.data.get(0)) + " & " + str(rep.data.get(1));
                     case OR -> str(rep.data.get(0)) + " | " + str(rep.data.get(1));

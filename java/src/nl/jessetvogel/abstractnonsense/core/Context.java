@@ -36,8 +36,7 @@ public class Context extends Diagram {
         }
         // Now all morphisms should be mapped
         for(int i : indices) {
-            Morphism x = session.morphism(i);
-            if(!mapping.determined(x))
+            if(!mapping.determined(i))
                 return false;
         }
         return true;
@@ -51,7 +50,7 @@ public class Context extends Diagram {
         // Create Mapping from otherData
         Mapping mapping = new Mapping(this, target);
         for (int i = 0; i < data.size(); ++i) {
-            if(!mapping.put(data.get(i), targetData.get(i)))
+            if(!mapping.set(data.get(i), targetData.get(i)))
                 return null;
         }
 
@@ -63,8 +62,8 @@ public class Context extends Diagram {
     }
 
     @Override
-    protected void replaceMorphism(Morphism x, Morphism y, List<MorphismPair> induced) throws Exception {
-        super.replaceMorphism(x, y, induced);
-        data.replaceAll(z -> (z.index == x.index ? new Morphism(y.index, z.k) : z));
+    protected void replaceMorphism(Morphism f, Morphism g, List<MorphismPair> induced) throws CreationException {
+        super.replaceMorphism(f, g, induced);
+        data.replaceAll(z -> (z.index == f.index ? new Morphism(g.index, z.k) : z));
     }
 }

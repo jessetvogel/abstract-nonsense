@@ -2,7 +2,6 @@ package nl.jessetvogel.abstractnonsense.core;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 
 public class Representation {
 
@@ -68,7 +67,7 @@ public class Representation {
             return false;
         Representation other = (Representation) obj;
 
-        if(type != other.type)
+        if (type != other.type)
             return false;
         return switch (type) {
             case HOM, COMPOSITION, FUNCTOR_APPLICATION -> data.equals(other.data);
@@ -80,11 +79,23 @@ public class Representation {
 
     @Override
     public int hashCode() {
-        return switch (type) {
-            case HOM, COMPOSITION, FUNCTOR_APPLICATION -> Objects.hash(type, data);
-            case EQUALITY, AND, OR -> data.get(0).hashCode() ^ data.get(1).hashCode();
-            case PROPERTY_APPLICATION -> Objects.hash(type, property, data);
-        };
+        switch (type) {
+            case HOM:
+                return 0x25afd075 ^ data.hashCode();
+            case COMPOSITION:
+                return 0xf3e9e500 ^ data.hashCode();
+            case FUNCTOR_APPLICATION:
+                return 0xecf348f4 ^ (31 * data.get(0).hashCode()) + data.get(1).hashCode();
+            case PROPERTY_APPLICATION:
+                return 0xce870ca1 ^ property.hashCode() ^ data.hashCode();
+            case EQUALITY:
+            case AND:
+            case OR:
+                int h1 = data.get(0).hashCode();
+                int h2 = data.get(1).hashCode();
+                return 0xe9fc74ac ^ type.hashCode() ^ (h1 ^ h2) ^ (h1 << 3);
+        }
+        return 0;
     }
 
 }

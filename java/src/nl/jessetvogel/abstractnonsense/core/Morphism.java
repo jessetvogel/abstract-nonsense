@@ -6,7 +6,7 @@ public class Morphism {
     public final int k;
     public MorphismInfo info;
 
-    Morphism(int index, int k) {
+    public Morphism(int index, int k) {
         this.index = index;
         this.k = k;
         info = null;

@@ -11,16 +11,15 @@ public class Session extends Diagram {
 
     private final Map<String, Property> properties;
     private final Map<String, Theorem> theorems;
-    private final List<Diagram> examples;
+    private final Map<String, Diagram> examples;
 
     private final Map<Integer, Diagram> owners;
     private final Map<Integer, MorphismInfo> morphismInfo;
-    private final Map<Integer, Integer> identifications;
 
     public final List<Integer> nCat;
     public final Morphism True, False, Prop, Set, Cat;
 
-    private final Map<Integer, MorphismPair> homs;
+    private final Map<Integer, MorphismPair> homs; // TODO: Can we not discard these?
 
     public Session() {
         super(null, null);
@@ -28,10 +27,9 @@ public class Session extends Diagram {
         // Create maps
         properties = new HashMap<>();
         theorems = new HashMap<>();
-        examples = new ArrayList<>();
+        examples = new HashMap<>();
         owners = new HashMap<>();
         morphismInfo = new HashMap<>();
-        identifications = new HashMap<>();
         homs = new HashMap<>();
         contradiction = false;
 
@@ -206,7 +204,13 @@ public class Session extends Diagram {
         return theorems.values();
     }
 
-    public List<Diagram> getExamples() { return examples; }
+    public boolean hasExample(String name) { return examples.containsKey(name); }
+
+    public void addExample(String name, Diagram example) {
+        examples.put(name, example);
+    }
+
+    public Set<Map.Entry<String, Diagram>> getExamples() { return examples.entrySet(); }
 
     public Morphism nCat(int n) {
         int i = n + 2; // Mind the offset
@@ -220,15 +224,16 @@ public class Session extends Diagram {
         return f.k > f.info.k;
     }
 
-//    public Morphism liftIdentity(Morphism x) {
-//        return new Morphism(x.index, x.k - 1);
-//    }
-
     public boolean isCategory(Morphism C) {
         return nCat.contains(cat(C).index);
     }
 
-    public void identify(Morphism f, Morphism g) throws Exception {
+    public void identify(Morphism f, Morphism g) throws CreationException {
+        Map<Integer, Integer> identifications = new HashMap<>();
+        identify(identifications, f, g);
+    }
+
+    private void identify(Map<Integer, Integer> identifications, Morphism f, Morphism g) throws CreationException {
         // First look up in the identification table
         while(identifications.containsKey(f.index))
             f = new Morphism(identifications.get(f.index), f.k);
@@ -247,7 +252,7 @@ public class Session extends Diagram {
 
         // f and g must be comparable
         if (!comparable(f, g))
-            throw new Exception("incomparable morphisms");
+            throw new CreationException("Incomparable morphisms");
 
         // We are going to replace f with g, so f must be the in the 'younger' diagram, and g in the 'older' diagram.
         // In other words, owner(f) must know g. If not, swap f and g
@@ -271,8 +276,8 @@ public class Session extends Diagram {
         }
 
         // Now we replace f with g (keeping track of induced identifications) starting from the Diagram that owns f (any Diagram below that won't know of f)
-        List<MorphismPair> induced = new ArrayList<>();
-        df.replaceMorphism(f, g, induced);
+        List<MorphismPair> inducedIdentifications = new ArrayList<>();
+        df.replaceMorphism(f, g, inducedIdentifications);
 
         // Delete index from diagram and remove owner
         df.removeIndex(f.index);
@@ -287,32 +292,32 @@ public class Session extends Diagram {
                     case HOM: {
                         Morphism P = rep.data.get(0), Q = rep.data.get(1);
                         if (!gBool) {
-                            induced.add(new MorphismPair(P, True));
-                            induced.add(new MorphismPair(Q, False));
+                            inducedIdentifications.add(new MorphismPair(P, True));
+                            inducedIdentifications.add(new MorphismPair(Q, False));
                         }
                         if (gBool && Q.equals(False))
-                            induced.add(new MorphismPair(P, False));
+                            inducedIdentifications.add(new MorphismPair(P, False));
                         break;
                     }
                     case EQUALITY: {
                         if (gBool) {
                             Morphism u = rep.data.get(0), v = rep.data.get(1);
-                            if(degree(u) <= 0)
-                                induced.add(new MorphismPair(u, v));
+                            if(!isCategory(u))
+                                inducedIdentifications.add(new MorphismPair(u, v));
                         }
                         break;
                     }
                     case AND: {
                         if (gBool) {
-                            induced.add(new MorphismPair(rep.data.get(0), True));
-                            induced.add(new MorphismPair(rep.data.get(1), True));
+                            inducedIdentifications.add(new MorphismPair(rep.data.get(0), True));
+                            inducedIdentifications.add(new MorphismPair(rep.data.get(1), True));
                         }
                         break;
                     }
                     case OR: {
                         if (!gBool) {
-                            induced.add(new MorphismPair(rep.data.get(0), False));
-                            induced.add(new MorphismPair(rep.data.get(1), False));
+                            inducedIdentifications.add(new MorphismPair(rep.data.get(0), False));
+                            inducedIdentifications.add(new MorphismPair(rep.data.get(1), False));
                         }
                     }
                     default:
@@ -328,8 +333,8 @@ public class Session extends Diagram {
         // TODO: anything to do afterwards?
 
         // Continue with possible induced equalities
-        for (MorphismPair pair : induced)
-            identify(pair.x, pair.y);
+        for (MorphismPair pair : inducedIdentifications)
+            identify(identifications, pair.x, pair.y);
     }
 
     public boolean comparable(Morphism f, Morphism g) {
@@ -344,12 +349,15 @@ public class Session extends Diagram {
         return owners.get(f.index);
     }
 
-    public Morphism morphism(int index) {
+    public Morphism morphism(int index, int k) {
         MorphismInfo info = morphismInfo.get(index);
         if (info == null)
             return null;
 
-        Morphism f = new Morphism(index, info.k);
+        if(info.k > k)
+            return null;
+
+        Morphism f = new Morphism(index, k);
         f.info = info;
         return f;
     }

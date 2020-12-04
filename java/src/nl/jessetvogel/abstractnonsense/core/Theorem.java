@@ -109,9 +109,9 @@ public class Theorem extends Context {
 //    }
 
     @Override
-    protected void replaceMorphism(Morphism x, Morphism y, List<MorphismPair> induced) throws Exception {
-        super.replaceMorphism(x, y, induced);
-        conditions.replaceAll(z -> (z.index == x.index ? new Morphism(y.index, z.k) : z));
-        conclusions.replaceAll(z -> (z.index == x.index ? new Morphism(y.index, z.k) : z));
+    protected void replaceMorphism(Morphism f, Morphism g, List<MorphismPair> induced) throws CreationException {
+        super.replaceMorphism(f, g, induced);
+        conditions.replaceAll(z -> (z.index == f.index ? new Morphism(g.index, z.k) : z));
+        conclusions.replaceAll(z -> (z.index == f.index ? new Morphism(g.index, z.k) : z));
     }
 }
