@@ -25,11 +25,8 @@ property    qcompact,
 }
 
 # Define morphism properties
-property    etale,
-            formally_etale,
-            unramified,
+property    formally_etale,
             formally_unramified,
-            smooth,
             formally_smooth,
             proper,
             finite,
@@ -44,6 +41,11 @@ property    etale,
             locally_finite_presentation {
                 use X, Y : Scheme let f : X -> Y
 }
+
+property etale { use X, Y : Scheme let f : X -> Y def formally_etale(f) & locally_finite_presentation(f) }
+property smooth { use X, Y : Scheme let f : X -> Y def formally_smooth(f) & locally_finite_presentation(f) }
+property unramified { use X, Y : Scheme let f : X -> Y def formally_unramified(f) & locally_finite_presentation(f) }
+
 
 # Define topological properties
 property connected { let X : Top }

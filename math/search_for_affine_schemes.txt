@@ -1,0 +1,3 @@
+import "/Users/jessevogel/Projects/abstract-nonsense/math/math.txt"
+
+search { let X : Scheme with affine(X) }
