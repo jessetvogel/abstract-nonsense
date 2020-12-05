@@ -1,5 +1,6 @@
 # import "/Users/jessevogel/Projects/abstract-nonsense/math/math.txt"
 import "/Users/jessevogel/Projects/abstract-nonsense/math/AG-definitions.txt"
+import "/Users/jessevogel/Projects/abstract-nonsense/math/AG-examples.txt"
 
 # Define theorems
 theorem T0 { let X : Scheme with affine(X) then qcompact(X) }
@@ -57,14 +58,3 @@ theorem T14 {
     with etale(f)
     then formally_etale(f), locally_finite_presentation(f)
 }
-
-
-
-let X : Scheme
-assume affine(X)
-prove qcompact(X)
-
-let Y : Scheme
-assume regular(Y)
-assume affine(Y)
-prove noetherian(Y)

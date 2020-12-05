@@ -1,0 +1,57 @@
+example affine_line_over_QQ {
+    let QQ_x : Ring
+    with
+        affine(Spec(QQ_x))
+}
+
+
+example ZZ {
+    let ZZ : Ring
+    write X = Spec(ZZ)
+    with
+        irreducible(X),
+        locally_noetherian(X),
+        excellent(X),
+        reduced(X),
+        regular(X),
+        integral(X),
+        affine(X),
+        cohen_macaulay(X),
+        noetherian(X)
+}
+
+
+example infinite_union_of_Spec_QQ {
+    let X : Scheme
+    with    ~irreducible(X),
+            ~connected(top(X)),
+            normal(X),
+            separated(X),
+            regular(X),
+            locally_noetherian(X),
+            ~qcompact(X),
+            ~noetherian(X),
+            cohen_macaulay(X),
+            ~affine(X),
+            ~integral(X),
+            excellent(X),
+            reduced(X)
+}
+
+example infinitely_blown_up_plane {
+    let X : Scheme
+    with 
+        ~noetherian(X),
+        ~affine(X),
+        integral(X),
+        regular(X),
+        ~qcompact(X),
+        normal(X),
+        connected(top(X)),
+        cohen_macaulay(X),
+        irreducible(X),
+        separated(X),
+        locally_noetherian(X),
+        reduced(X)
+}
+ 
