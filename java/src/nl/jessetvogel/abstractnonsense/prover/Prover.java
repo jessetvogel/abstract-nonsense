@@ -239,7 +239,7 @@ public class Prover {
             conditions.remove(g);
             if (conditions.isEmpty()) {
                 try {
-                    session.identify(goal.P, session.True);
+                    session.identify(goal.P, session.True); // TODO: this is going to give problems at some point! Possible solution: make Prover a Diagram, and then it has a replaceMorphism method!
                     goal.setProven();
                 }
                 catch(Exception e) {

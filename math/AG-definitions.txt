@@ -4,6 +4,9 @@ let Ring, Scheme, Top : Cat
 # Define functors
 let Spec : Ring -> Scheme
 let Global : Scheme -> Ring
+assume (Global.Spec) = id(Ring)
+assume ((Spec.Global).Spec) = Spec
+
 let top : Scheme -> Top
 
 # Define scheme properties
@@ -13,7 +16,6 @@ property    qcompact,
             regular,
             noetherian,
             locally_noetherian,
-            integral,
             reduced,
             irreducible,
             cohen_macaulay,
@@ -23,6 +25,8 @@ property    qcompact,
             normal {
                 let X : Scheme
 }
+
+property integral { let X : Scheme def reduced(X) & irreducible(X) }
 
 # Define morphism properties
 property    formally_etale,
@@ -38,6 +42,7 @@ property    formally_etale,
             qseparated,
             regular,
             finite_presentation,
+            locally_finite_type,
             locally_finite_presentation {
                 use X, Y : Scheme let f : X -> Y
 }
@@ -45,6 +50,12 @@ property    formally_etale,
 property etale { use X, Y : Scheme let f : X -> Y def formally_etale(f) & locally_finite_presentation(f) }
 property smooth { use X, Y : Scheme let f : X -> Y def formally_smooth(f) & locally_finite_presentation(f) }
 property unramified { use X, Y : Scheme let f : X -> Y def formally_unramified(f) & locally_finite_presentation(f) }
+
+property finite_type { use X, Y : Scheme let f : X -> Y def locally_finite_type(f) & qcompact(f) }
+
+
+# Better to use as definition, or as theorem called 'definition proper'?
+# property proper { use X, Y : Scheme let f : X -> Y def separated(f) & universally_closed(f) & finite_type(f) }
 
 
 # Define topological properties

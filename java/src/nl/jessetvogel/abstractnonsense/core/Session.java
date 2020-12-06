@@ -15,6 +15,7 @@ public class Session extends Diagram {
 
     private final Map<Integer, Diagram> owners;
     private final Map<Integer, MorphismInfo> morphismInfo;
+    private final Map<Integer, Integer> identifications;
 
     public final List<Integer> nCat;
     public final Morphism True, False, Prop, Set, Cat;
@@ -30,6 +31,7 @@ public class Session extends Diagram {
         examples = new HashMap<>();
         owners = new HashMap<>();
         morphismInfo = new HashMap<>();
+        identifications = new HashMap<>();
         homs = new HashMap<>();
         contradiction = false;
 
@@ -136,7 +138,7 @@ public class Session extends Diagram {
         // If given category is a hom-category, then create k-morphism for higher k
         if (homs.containsKey(category.index)) {
             MorphismPair pair = homs.get(category.index);
-            return createMorphism(diagram, session.cat(pair.x), pair.x.k + 1, pair.x, pair.y);
+            return createMorphism(diagram, session.cat(pair.f), pair.f.k + 1, pair.f, pair.g);
         }
 
         return createMorphism(diagram, category, 0, category, category);
@@ -212,6 +214,10 @@ public class Session extends Diagram {
 
     public Set<Map.Entry<String, Diagram>> getExamples() { return examples.entrySet(); }
 
+    public Diagram getExample(String name) {
+        return examples.get(name);
+    }
+
     public Morphism nCat(int n) {
         int i = n + 2; // Mind the offset
         while (i >= nCat.size())
@@ -225,15 +231,10 @@ public class Session extends Diagram {
     }
 
     public boolean isCategory(Morphism C) {
-        return nCat.contains(cat(C).index);
+        return C.k == 0 && nCat.contains(cat(C).index);
     }
 
     public void identify(Morphism f, Morphism g) throws CreationException {
-        Map<Integer, Integer> identifications = new HashMap<>();
-        identify(identifications, f, g);
-    }
-
-    private void identify(Map<Integer, Integer> identifications, Morphism f, Morphism g) throws CreationException {
         // First look up in the identification table
         while(identifications.containsKey(f.index))
             f = new Morphism(identifications.get(f.index), f.k);
@@ -332,9 +333,8 @@ public class Session extends Diagram {
 
         // TODO: anything to do afterwards?
 
-        // Continue with possible induced equalities
         for (MorphismPair pair : inducedIdentifications)
-            identify(identifications, pair.x, pair.y);
+            identify(pair.f, pair.g);
     }
 
     public boolean comparable(Morphism f, Morphism g) {
@@ -349,7 +349,7 @@ public class Session extends Diagram {
         return owners.get(f.index);
     }
 
-    public Morphism morphism(int index, int k) {
+    public Morphism morphismFromIndex(int index, int k) {
         MorphismInfo info = morphismInfo.get(index);
         if (info == null)
             return null;
@@ -372,4 +372,5 @@ public class Session extends Diagram {
     public void print(String message) {
         System.out.println(message);
     }
+
 }

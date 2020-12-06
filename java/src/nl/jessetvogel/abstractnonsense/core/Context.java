@@ -11,38 +11,27 @@ public class Context extends Diagram {
         data = new ArrayList<>();
     }
 
-    public void addData(Morphism x) {
-        data.add(x);
+    public String signature() {
+        return session.signature(data);
     }
-
-    public boolean isData(Morphism x) {
-        return data.contains(x);
-    }
-
-//    public boolean isValidData(Diagram target, List<Morphism> targetData) {
-//        Mapping mapping = mappingFromData(target, targetData);
-//        if(mapping == null)
-//            return false;
-//        return mapping.isValid();
-//    }
 
     public boolean isReduced() {
         // Reduced means that every morphism in the context depends on the data
         // An easy check to see if is the case is to try to map the context to itself
-        Mapping mapping = mappingFromData(this, data);
+        Mapping mapping = createMappingFromData(this, data);
         if(mapping == null || !mapping.valid()) {
             System.err.println("Hmm, this should not happen!");
             return false;
         }
         // Now all morphisms should be mapped
-        for(int i : indices) {
-            if(!mapping.determined(i))
+        for(int index : indices) {
+            if(!mapping.determined(index))
                 return false;
         }
         return true;
     }
 
-    public Mapping mappingFromData(Diagram target, List<Morphism> targetData) {
+    public Mapping createMappingFromData(Diagram target, List<Morphism> targetData) {
         // Amount of data must match
         if (targetData.size() != data.size())
             return null;
@@ -55,10 +44,6 @@ public class Context extends Diagram {
         }
 
         return mapping;
-    }
-
-    public String signature() {
-        return session.signature(data);
     }
 
     @Override

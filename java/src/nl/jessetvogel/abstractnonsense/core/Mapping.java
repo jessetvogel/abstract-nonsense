@@ -53,10 +53,6 @@ public class Mapping {
                 return false;
         }
 
-        // If f is data, stop here.
-        if (context.isData(f))
-            return true;
-//
 //        // TODO: CAN DO MORE HERE ALREADY
 //        // TODO: maybe already map everything that depends on what is currently mapped
 
@@ -115,31 +111,27 @@ public class Mapping {
             for (Iterator<Map.Entry<Representation, Morphism>> it = rToMap.iterator(); it.hasNext(); ) {
                 Map.Entry<Representation, Morphism> entry = it.next();
                 Representation rep = entry.getKey();
-                Morphism x = entry.getValue();
-
-                // If r is a representation of some datum, nothing to check // TODO: is this even possible? do data have non-symbol represenations?
-                if (context.isData(x)) {
-                    it.remove();
-                    continue;
-                }
+                Morphism f = entry.getValue();
 
                 // Can only extend the mapping to r if all its dependencies are already mapped
                 if (!determinedAll(rep.data))
                     continue;
 
-                Morphism y;
+                Morphism g;
                 try {
-                    y = target.createFromRepresentation(rep, this);
+//                    System.out.println("Set g to be the image of " + context.str(f));
+                    g = target.morphism(rep.map(this));
                 } catch (CreationException e) {
                     System.err.println(e.getMessage());
                     return false;
                 }
 
-                if (!set(x, y))
-//                    System.err.println("Failed to map " + context.str(x) + " to " + target.str(y));
+                if (!set(f, g)) {
+//                    System.err.println("Failed to map " + context.str(f) + " to " + target.str(g));
                     return false;
+                }
 
-//                System.out.println("Put " + context.str(x) + " [" + x.index + ", " + x.k + "] |-> " + target.str(y) + " [" + y.index + ", " + y.k + "]");
+//                System.out.println("Put " + context.str(f) + " [" + f.index + ", " + f.k + "] |-> " + target.str(g) + " [" + g.index + ", " + g.k + "]");
 
                 it.remove();
                 updates = true;
@@ -156,76 +148,4 @@ public class Mapping {
         return true;
     }
 
-//    public void search(List<Mapping> list) {
-//        // Consider first datum x which is not yet mapped
-//        for (Morphism x : context.data) {
-//            if (determined(x))
-//                continue;
-//
-//            // Find candidates y for x
-//            List<Morphism> candidates = findCandidates(x);
-//
-//            if (candidates.isEmpty())
-//                return;
-//
-//            if (candidates.size() == 1) {
-//                if (!set(x, candidates.get(0)))
-//                    return;
-//                continue;
-//            }
-//
-//            // Branch out
-//            for (Morphism y : candidates) {
-//                Mapping m = new Mapping(this);
-//                if (m.set(x, y))
-//                    m.search(list);
-//            }
-//
-//            return;
-//        }
-//
-//        // If all data was mapped, it is only left to validate the mapping
-//        if (valid())
-//            list.add(this);
-//    }
-
-//    private List<Morphism> findCandidates(Morphism x) {
-//        Morphism cat = session.cat(x), dom = session.dom(x), cod = session.cod(x);
-//        boolean filterCat = !context.owns(cat), filterDom = !context.owns(dom), filterCod = !context.owns(cod);
-//
-//        if (!filterCat && determined(cat)) {
-//            cat = map(cat);
-//            filterCat = true;
-//        }
-//        if (!filterDom && determined(dom)) {
-//            dom = map(dom);
-//            filterDom = true;
-//        }
-//        if (!filterCod && determined(cod)) {
-//            cod = map(cod);
-//            filterCod = true;
-//        }
-//
-//        List<Morphism> candidates = new ArrayList<>();
-//        for (int j : target.indices) {
-//            Morphism y = session.morphism(j);
-//            if (y == null)
-//                continue;
-//            if (y.k > x.k)
-//                continue;
-//            if (y.k < x.k)
-//                y = new Morphism(y.index, x.k);
-//
-//            if (filterCat && !session.cat(y).equals(cat))
-//                continue;
-//            if (filterDom && !session.dom(y).equals(dom))
-//                continue;
-//            if (filterCod && !session.cod(y).equals(cod))
-//                continue;
-//
-//            candidates.add(y);
-//        }
-//
-//        return candidates;
-//    }
 }

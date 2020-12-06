@@ -31,31 +31,43 @@ public class Representation {
         this.data = data;
     }
 
-    public static Representation createHom(Morphism x, Morphism y) {
+    public Representation map(Mapping m) {
+        return switch(type) {
+            case HOM -> hom(m.map(data.get(0)), m.map(data.get(1)));
+            case EQUALITY -> equality(m.map(data.get(0)), m.map(data.get(1)));
+            case AND -> and(m.map(data.get(0)), m.map(data.get(1)));
+            case OR -> or(m.map(data.get(0)), m.map(data.get(1)));
+            case COMPOSITION -> composition(m.map(data));
+            case FUNCTOR_APPLICATION -> functorApplication(m.map(data.get(0)), m.map(data.get(1)));
+            case PROPERTY_APPLICATION -> propertyApplication(property, m.map(data));
+        };
+    }
+
+    public static Representation hom(Morphism x, Morphism y) {
         return new Representation(Type.HOM, Arrays.asList(x, y));
     }
 
-    public static Representation createEquality(Morphism x, Morphism y) {
+    public static Representation equality(Morphism x, Morphism y) {
         return new Representation(Type.EQUALITY, Arrays.asList(x, y));
     }
 
-    public static Representation createAnd(Morphism P, Morphism Q) {
+    public static Representation and(Morphism P, Morphism Q) {
         return new Representation(Type.AND, Arrays.asList(P, Q));
     }
 
-    public static Representation createOr(Morphism P, Morphism Q) {
+    public static Representation or(Morphism P, Morphism Q) {
         return new Representation(Type.OR, Arrays.asList(P, Q));
     }
 
-    public static Representation createComposition(List<Morphism> fList) {
+    public static Representation composition(List<Morphism> fList) {
         return new Representation(Type.COMPOSITION, fList);
     }
 
-    public static Representation createProperty(Property property, List<Morphism> data) {
+    public static Representation propertyApplication(Property property, List<Morphism> data) {
         return new Representation(property, data);
     }
 
-    public static Representation createFunctor(Morphism F, Morphism x) {
+    public static Representation functorApplication(Morphism F, Morphism x) {
         return new Representation(Type.FUNCTOR_APPLICATION, Arrays.asList(F, x));
     }
 

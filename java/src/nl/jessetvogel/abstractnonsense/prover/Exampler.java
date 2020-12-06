@@ -31,6 +31,10 @@ public class Exampler {
 
             // Print results
             for (Mapping m : mappings) {
+                // If this is an disingenuous mapping (i.e. the data is not really mapped to the target), then skip this mapping
+                if(!m.target.ownsAny(m.map(context.data)))
+                    continue;
+
                 StringJoiner sj = new StringJoiner(", ");
                 sj.setEmptyValue("{}");
                 for (Morphism f : context.data) {

@@ -81,7 +81,7 @@ public class Searcher extends Mapping {
             Morphism f = context.representations.get(rep);
             Morphism g;
             try {
-                g = target.createFromRepresentation(rep, this);
+                g = target.morphism(rep.map(this));
             } catch (CreationException e) {
                 System.err.println(e.getMessage());
                 continue;
@@ -116,7 +116,7 @@ public class Searcher extends Mapping {
 
         // Find morphisms in target whose cat, dom, cod are what we are looking for
         for(int index : diagram.indices) {
-            Morphism g = session.morphism(index, f.k);
+            Morphism g = session.morphismFromIndex(index, f.k);
             if(g == null || !session.cat(g).equals(cat) || !session.dom(g).equals(dom) || !session.cod(g).equals(cod))
                 continue;
 

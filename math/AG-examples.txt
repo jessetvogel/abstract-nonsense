@@ -1,9 +1,7 @@
 example affine_line_over_QQ {
     let QQ_x : Ring
-    with
-        affine(Spec(QQ_x))
+    write X = Spec(QQ_x)
 }
-
 
 example ZZ {
     let ZZ : Ring

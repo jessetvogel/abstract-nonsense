@@ -1,8 +1,17 @@
 ## Automatic reduction rules
 
+**No actual identifications should be made during the creation of a morphism! This messes up everything!**
+
+Instead, during the creation of a morphism, first search for alternative representations. If there are none, only then create a new morphism. There are (at least) two ways to go about this:
+
+- Have a 'preferred' direction of creating these morphisms (actual **reduction** rules so to say)
+- Do some (smart) search for alternative representations: e.g. (`(f.g).h` also checks if `f.g.h` or `f.(g.h)` is already created)
 
 
-### Immediate rules / cases where not even a Representation is made
+
+
+
+### Immediate rules / cases where not even a Representation is made (These can be checked 'intrinsically': we do not need to look at the representations of the arguments)
 
 - `P = P` gives `True`
 - `True = False` gives `False`
@@ -13,6 +22,8 @@
 - `P -> True` gives `True`
 - `False -> P` gives `True`
 - `True -> False` gives `False`
+- `P & P` gives `P`
+- `P | P` gives `P`
 
 
 
