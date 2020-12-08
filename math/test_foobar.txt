@@ -1,0 +1,8 @@
+property foo { let A : Set }
+property bar { let A : Set }
+
+theorem all_sets_are_foo { let A : Set then foo(A) }
+
+let A : Set
+assume foo(A) -> bar(A)
+prove bar(A)

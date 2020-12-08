@@ -6,3 +6,4 @@ let Y : Scheme
 assume regular(Y)
 assume affine(Y)
 prove noetherian(Y)
+

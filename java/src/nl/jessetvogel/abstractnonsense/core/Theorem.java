@@ -22,8 +22,8 @@ public class Theorem extends Context {
     public void addConclusion(Morphism Q) {
         conclusions.add(Q);
     }
-    
-    public List<Morphism> apply(Mapping mapping) {
+
+    public List<Morphism>  apply(Mapping mapping) {
         // Mapping must be valid
         if (!mapping.valid())
             return null;
@@ -36,7 +36,7 @@ public class Theorem extends Context {
                 list.add(Q);
         }
 
-        // If all conditions are satisfied, we apply the conclusion
+        // Only if all conditions are satisfied, we apply the conclusion
         if (list.isEmpty())
             applyConclusion(mapping);
 
@@ -47,8 +47,7 @@ public class Theorem extends Context {
         for (Morphism Q : conclusions) {
             try {
                 session.identify(mapping.map(Q), session.True);
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
                 System.err.println("Failed! " + e.getMessage());
             }
         }
