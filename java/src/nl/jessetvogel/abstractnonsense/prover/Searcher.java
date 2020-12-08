@@ -158,7 +158,6 @@ public class Searcher extends Mapping {
         }
 
         private void addToQueue(Morphism f) {
-            // TODO: what if f is an identity morphism?
             if(queue.contains(f))
                 return;
             if(!determined(f)) {

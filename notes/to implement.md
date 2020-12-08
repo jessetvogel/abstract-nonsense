@@ -7,6 +7,9 @@
 
 
 
+- ~~Correct kind of parsing for morphisms: `P & Q = R` should be `(P & Q) = R` and not `P & (Q = R)` for example~~
+- ~~Local path referencing~~
+
 
 
 - How to deal with modules? Cannot do `Mod : Ring -> Cat` anymore since `Ring` is a 1-category and `Cat` a 2-category.

@@ -12,113 +12,122 @@ public class Lexer {
     public static final Pattern PATTERN_IDENTIFIERS = Pattern.compile("^\\w+$");
     public static final Pattern PATTERN_STRING = Pattern.compile("^\"[^\"]*\"$");
 
-    Scanner scanner;
+    private final Scanner scanner;
 
-    Token currentToken = null;
-    String tmp = "";
-    int tmpLine = 0, tmpPosition = 1;
+    private Token currentToken = null;
+    private final StringBuilder sb;
+    private int line = 0, position = 1;
 
     public Lexer(Scanner scanner) {
         this.scanner = scanner;
-    }
-
-    Token tokenize(String str) {
-        if(KEYWORDS.contains(str))
-            return new Token(tmpLine, tmpPosition, Token.Type.KEYWORD, str);
-        if(SEPARATORS.contains(str))
-            return new Token(tmpLine, tmpPosition, Token.Type.SEPARATOR, str);
-        if(str.equals("\n"))
-            return new Token(tmpLine, tmpPosition, Token.Type.NEWLINE, str);
-        if(PATTERN_NUMBERS.matcher(str).matches())
-            return new Token(tmpLine, tmpPosition, Token.Type.NUMBER, str);
-        if(PATTERN_IDENTIFIERS.matcher(str).matches())
-            return new Token(tmpLine, tmpPosition, Token.Type.IDENTIFIER, str);
-        if(PATTERN_STRING.matcher(str).matches())
-            return new Token(tmpLine, tmpPosition, Token.Type.STRING, str.substring(1, str.length() - 1));
-
-        return null;
+        sb = new StringBuilder();
     }
 
     Token getToken() throws IOException, LexerException {
         // Read characters until a new Token is produced
-        while(true) {
+        while (true) {
             Character c = scanner.get();
 
             // End of file
-            if(c == null) {
-                if(tmp.isEmpty())
-                    return new Token( tmpLine, tmpPosition, Token.Type.EOF);
+            if (c == null) {
+                if (sb.length() == 0)
+                    return new Token(Token.Type.EOF, null, line, position);
 
-                Token token = tokenize(tmp);
-                if(token == null)
+                if (!tokenize(sb.toString()))
                     throw new LexerException("Unexpected end of file");
-                currentToken = null;
-                tmp = "";
-                return token;
+
+                return makeToken();
             }
 
             // Whitespace: always marks the end of a token (if there currently is one)
-            if(c.equals(' ') || c.equals('\t')) {
-                if(tmp.isEmpty())
+            if (c.equals(' ') || c.equals('\t')) {
+                if (sb.length() == 0)
                     continue;
 
-                if(currentToken == null)
-                    throw new LexerException("Unknown token '" + tmp + "'");
-
-                Token token = currentToken;
-                currentToken = null;
-                tmp = "";
-                return token;
+                return makeToken();
             }
 
             // Comments: mark the end of a token (if there currently is one),
             // then continue discarding characters until a newline appears
-            if(c.equals('#')) {
-                Token token = null;
-                if(!tmp.isEmpty()) {
-                    if (currentToken == null)
-                        throw new LexerException("Unknown token '" + tmp + "'");
-                    token = currentToken;
-                }
+            if (c.equals('#')) {
+                Token token = (sb.length() != 0) ? makeToken() : null;
 
                 do {
                     c = scanner.get();
                 } while (c != null && !c.equals('\n'));
 
-                tmp = (c == null ? "" : String.valueOf(c));
-                tmpLine = scanner.line;
-                tmpPosition = scanner.position;
-                currentToken = tokenize(tmp);
+                if (c != null)
+                    sb.append(c);
 
+                line = scanner.line;
+                position = scanner.position;
+                tokenize(sb.toString());
                 return (token != null) ? token : getToken();
             }
 
-            // Try to enlarge the token if possible
-            Token token = tokenize(tmp + c);
-            if(token != null) {
-                currentToken = token;
-                if(tmp.isEmpty()) {
-                    tmpLine = scanner.line;
-                    tmpPosition = scanner.position;
-                }
-                tmp += c;
-                continue;
+            // If string buffer is empty, set line and position of next token
+            if (sb.length() == 0) {
+                line = scanner.line;
+                position = scanner.position;
             }
 
-            // If we also did not succeed before, hope that it will make sense later
-            if(currentToken == null) {
-                tmp += c;
+            // Enlarge the token if possible
+            sb.append(c);
+
+            // If can tokenize, just continue
+            if (tokenize(sb.toString()))
                 continue;
-            }
+
+            // If we also did not tokenize before, hope that it will make sense later
+            if (currentToken == null)
+                continue;
 
             // Return the last valid token
-            token = currentToken;
-            tmp = c.toString();
-            tmpLine = scanner.line;
-            tmpPosition = scanner.position;
-            currentToken = tokenize(tmp);
+            Token token = makeToken();
+            sb.append(c);
+            line = scanner.line;
+            position = scanner.position;
+            tokenize(sb.toString());
             return token;
         }
+    }
+
+    private boolean tokenize(String str) {
+        Token.Type type;
+        if (KEYWORDS.contains(str))
+            type = Token.Type.KEYWORD;
+        else if (SEPARATORS.contains(str))
+            type = Token.Type.SEPARATOR;
+        else if (str.equals("\n"))
+            type = Token.Type.NEWLINE;
+        else if (PATTERN_NUMBERS.matcher(str).matches())
+            type = Token.Type.NUMBER;
+        else if (PATTERN_IDENTIFIERS.matcher(str).matches())
+            type = Token.Type.IDENTIFIER;
+        else if (PATTERN_STRING.matcher(str).matches()) {
+            type = Token.Type.STRING;
+            str = str.substring(1, str.length() - 1);
+        }
+        else
+            return false;
+
+        if (currentToken == null)
+            currentToken = new Token(type, str, line, position);
+        else {
+            currentToken.type = type;
+            currentToken.data = str;
+        }
+        return true;
+    }
+
+    private Token makeToken() throws LexerException {
+        if (currentToken == null)
+            throw new LexerException("Unknown token '" + sb.toString() + "'");
+
+        Token token = currentToken;
+        currentToken = null;
+        sb.setLength(0);
+        return token;
     }
 
 }

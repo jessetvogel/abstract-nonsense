@@ -1,11 +1,10 @@
 package nl.jessetvogel.abstractnonsense.prover;
 
+import jdk.jshell.Diag;
 import nl.jessetvogel.abstractnonsense.core.*;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.StringJoiner;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class Exampler {
 
@@ -20,7 +19,10 @@ public class Exampler {
     public void search() {
         boolean results = false;
 
-        for (Map.Entry<String, Diagram> example : session.getExamples()) {
+        List<Map.Entry<String, Diagram>> diagrams = new ArrayList<>(session.getExamples());
+        diagrams.add(new AbstractMap.SimpleEntry<>("session", session));
+
+        for (Map.Entry<String, Diagram> example : diagrams) {
             String name = example.getKey();
             Diagram diagram = example.getValue();
 

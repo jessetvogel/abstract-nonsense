@@ -1,8 +1,3 @@
-example affine_line_over_QQ {
-    let QQ_x : Ring
-    write X = Spec(QQ_x)
-}
-
 example ZZ {
     let ZZ : Ring
     write X = Spec(ZZ)
@@ -16,6 +11,27 @@ example ZZ {
         affine(X),
         cohen_macaulay(X),
         noetherian(X)
+}
+
+example QQ {
+    let QQ : Ring
+    write X = Spec(QQ)
+    with
+        qcompact(X),
+        cohen_macaulay(X),
+        integral(X),
+        excellent(X),
+        noetherian(X),
+        connected(top(X)),
+        regular(X),
+        locally_noetherian(X),
+        qseparated(X),
+        separated(X)
+}
+
+example affine_line_over_QQ {
+    let QQ_x : Ring
+    write X = Spec(QQ_x)
 }
 
 
@@ -53,3 +69,33 @@ example infinitely_blown_up_plane {
         reduced(X)
 }
  
+example affine_line_with_infinitely_many_origins {
+    let X : Scheme
+    with
+        ~separated(X),
+        ~noetherian(X),
+        integral(X),
+        ~qcompact(X),
+        ~affine(X),
+        normal(X),
+        connected(top(X)),
+        locally_noetherian(X),
+        cohen_macaulay(X),
+        qseparated(X)
+}
+
+example projective_line_over_QQ {
+    let X : Scheme
+    with
+        irreducible(X),
+        noetherian(X),
+        regular(X),
+        excellent(X),
+        integral(X),
+        ~affine(X),
+        qcompact(X),
+        cohen_macaulay(X),
+        qseparated(X)
+}
+
+

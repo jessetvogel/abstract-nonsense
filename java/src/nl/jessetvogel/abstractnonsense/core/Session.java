@@ -147,7 +147,6 @@ public class Session extends Diagram {
     public Morphism createMorphism(Diagram diagram, Morphism category, int k, Morphism domain, Morphism codomain) throws CreationException {
         if (!isCategory(category))
             throw new CreationException("is not a category");
-        // TODO: check: 'category' must be a category!
 
         // k must be non-negative
         if (k < 0)
@@ -267,8 +266,6 @@ public class Session extends Diagram {
 
 //        System.out.println("(Identifying " + df.str(f) + "[" + f.index + "] with " + df.str(g) + "[" + g.index + "])");
 
-        // TODO: must we 'descend' y if necessary?
-
         // Make changes in MorphismInfo
         for (MorphismInfo info : morphismInfo.values()) {
             if (info.cat == f.index) info.cat = g.index;
@@ -285,7 +282,7 @@ public class Session extends Diagram {
         owners.remove(f.index);
         morphismInfo.remove(f.index);
 
-        // If g is True, then there might be some more induced identifications TODO
+        // If g is True, then there might be some more induced identifications
         if (g.equals(True) || g.equals(False)) {
             boolean gBool = g.equals(True);
             for (Representation rep : df.getRepresentations(g)) {
@@ -330,8 +327,6 @@ public class Session extends Diagram {
         // Set identifications
         identifications.put(f.index, g.index);
 //        System.out.println("Put identification [" + f.index + "] -> [" + g.index + "]");
-
-        // TODO: anything to do afterwards?
 
         for (MorphismPair pair : inducedIdentifications)
             identify(pair.f, pair.g);

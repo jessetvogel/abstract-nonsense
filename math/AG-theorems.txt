@@ -1,7 +1,3 @@
-# import "/Users/jessevogel/Projects/abstract-nonsense/math/math.txt"
-import "/Users/jessevogel/Projects/abstract-nonsense/math/AG-definitions.txt"
-import "/Users/jessevogel/Projects/abstract-nonsense/math/AG-examples.txt"
-
 # Define theorems
 theorem T0 { let X : Scheme with affine(X) then qcompact(X) }
 theorem T1 { let X : Scheme with regular(X) then locally_noetherian(X) }

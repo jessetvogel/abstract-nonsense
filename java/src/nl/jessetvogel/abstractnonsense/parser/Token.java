@@ -12,19 +12,15 @@ public class Token {
         STRING
     }
 
-    public final Type type;
-    public final int line, position;
-    public final String data;
+    public Type type;
+    public String data;
+    public int line, position;
 
-    Token(int line, int position, Type type) {
-        this(line, position, type, null);
-    }
-
-    Token(int line, int position, Type type, String data) {
-        this.line = line;
-        this.position = position;
+    Token(Type type, String data, int line, int position) {
         this.type = type;
         this.data = data;
+        this.line = line;
+        this.position = position;
     }
 
 }

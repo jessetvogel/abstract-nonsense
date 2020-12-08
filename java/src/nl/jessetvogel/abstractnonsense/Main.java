@@ -18,11 +18,13 @@ public class Main {
             Parser parser = new Parser(lexer, session);
 
             try {
-                if(!parser.parse())
+                if (!parser.parse())
                     break;
             } catch (ParserException e) {
                 System.err.print("\u26A0\uFE0F Parsing error on line " + e.token.line + " at position " + e.token.position + ": " + e.getMessage());
-            } catch (LexerException | IOException e) {
+            } catch (LexerException e) {
+                System.err.print("\u26A0\uFE0F Lexing error: " + e.getMessage());
+            } catch (IOException e) {
                 e.printStackTrace();
             }
         }
