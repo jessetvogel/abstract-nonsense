@@ -14,6 +14,8 @@ public class Prover extends Diagram {
     private final Queue<Goal> queue;
     private final List<Implication> implications;
 
+    private List<String> proof;
+
     public Prover(Session session, Diagram target) {
         super(session, target);
         this.target = target;
@@ -27,6 +29,9 @@ public class Prover extends Diagram {
         // P must be a Proposition
         if (!session.cat(P).equals(session.Prop))
             return false;
+
+        // Create a new list to contain the proof
+        proof = new ArrayList<>();
 
         // Create goal for P
         Goal finalGoal = createGoal(P, money);
@@ -44,6 +49,10 @@ public class Prover extends Diagram {
             considerGoal(goal);
         }
 
+        // Print the proof
+        for (String line : proof)
+            session.print("\uD83D\uDCA1 " + line);
+
         return finalGoal.isProven();
     }
 
@@ -51,12 +60,12 @@ public class Prover extends Diagram {
         session.print("\uD83D\uDCCC Consider the goal " + target.str(goal.P) + " ($" + goal.money + ")");
 
         // If there is no money left, we can't buy anything!
-        if(goal.money == 0)
+        if (goal.money == 0)
             return;
 
         // See if any other propositions imply our goal
-        for(Representation rep : target.getRepresentations(session.True)) {
-            if(rep.type == Representation.Type.HOM && rep.data.get(1).equals(goal.P)) {
+        for (Representation rep : target.getRepresentations(session.True)) {
+            if (rep.type == Representation.Type.HOM && rep.data.get(1).equals(goal.P)) {
                 Morphism Q = rep.data.get(0);
                 createImplication(
                         goal,
@@ -68,13 +77,13 @@ public class Prover extends Diagram {
         }
 
         // See if any representation is implied by a theorem
-        for(Representation repP : target.getRepresentations(goal.P)) {
+        for (Representation repP : target.getRepresentations(goal.P)) {
             // Consider some special cases
-            if(repP.type == Representation.Type.AND)
+            if (repP.type == Representation.Type.AND)
                 considerAnd(goal, repP);
-            if(repP.type == Representation.Type.OR)
+            if (repP.type == Representation.Type.OR)
                 considerOr(goal, repP);
-            if(repP.type == Representation.Type.HOM)
+            if (repP.type == Representation.Type.HOM)
                 considerImplies(goal, repP);
 
             // Find applicable theorems
@@ -128,7 +137,7 @@ public class Prover extends Diagram {
         List<Mapping> mappings = new ArrayList<>();
         Searcher searcher = new Searcher(mapping);
         searcher.search(mappings);
-        for(Mapping m : mappings)
+        for (Mapping m : mappings)
             considerTheorem(goal, thm, m);
     }
 
@@ -137,29 +146,32 @@ public class Prover extends Diagram {
         String message = "By Theorem " + thm.name + " applied to (" + target.strList(mapping.map(thm.data)) + "), we have " + target.str(goal.P);
 
         // See if we can apply the theorem using mapping
-        // TODO: note: we actually want to print message before identifications are made!
+        int i = proof.size();
         List<Morphism> result = thm.apply(mapping);
-        if(result == null)
+        if (result == null)
             return;
 
-        // Create Implication
-        createImplication(goal, result, goal.money - 1, message);
+        // If the theorem was already applied, insert proof at appropriate place
+        if (result.isEmpty())
+            proof.add(i, message);
+
+        // Otherwise, create Implication
+        else createImplication(goal, result, goal.money - 1, message);
     }
 
     private void createImplication(Goal goal, List<Morphism> conditions, int money, String message) {
         // It is impossible to prove False, of course
-        if(conditions.contains(session.False))
+        if (conditions.contains(session.False))
             return;
 
         // If there are no (non-True) conditions, immediately conclude
         conditions.removeIf(P -> P.equals(session.True));
-        if(conditions.isEmpty()) {
-            session.print("\uD83D\uDCA1 " + message);
+        if (conditions.isEmpty()) {
+            proof.add(message);
 
             try {
                 session.identify(goal.P, session.True);
-            }
-            catch(CreationException e) {
+            } catch (CreationException e) {
                 e.printStackTrace();
             }
             return;
@@ -167,10 +179,10 @@ public class Prover extends Diagram {
 
         // Find or create goal for each condition
         List<Goal> listGoals = new ArrayList<>();
-        for(Morphism P : conditions) {
+        for (Morphism P : conditions) {
             Goal g = goals.get(P);
             // Create new goal if it does not yet exist
-            if(g == null)
+            if (g == null)
                 g = createGoal(P, money);
                 // If the goal g was given at least this much money before, it makes no sense to try to prove this goal again!
             else if (g.money >= money)
@@ -239,18 +251,18 @@ public class Prover extends Diagram {
 
         boolean update(Morphism P, Morphism Q, List<MorphismPair> induced) {
             // Replace conditions if necessary
-            conditions.replaceAll(R -> (R.index == P.index ? new Morphism(Q.index, R.k) : Q));
+            conditions.replaceAll(R -> (R.index == P.index ? new Morphism(Q.index, R.k) : R));
             // Remove all true conditions
             conditions.removeIf(R -> R.equals(session.True));
 
             // If this Implication is meaningless, mark as resolved without concluding
             // Also, if this becomes impossible to prove, mark as resolved without concluding
-            if(goal.P.equals(session.True) || goal.P.equals(session.False) || conditions.contains(session.False))
+            if (goal.P.equals(session.True) || goal.P.equals(session.False) || conditions.contains(session.False))
                 return true;
 
             // If there are no more conditions, conclude!
-            if(conditions.isEmpty()) {
-                session.print("\uD83D\uDCA1 " + message);
+            if (conditions.isEmpty()) {
+                proof.add(message);
                 induced.add(new MorphismPair(goal.P, session.True)); // Note: indeed, all goal.P's were already updated before
                 return true;
             }
@@ -264,18 +276,18 @@ public class Prover extends Diagram {
         super.replaceMorphism(f, g, induced);
 
         // Don't bother doing anything with Goals and Implications if f and g are not Propositions..
-        if(!session.cat(f).equals(session.Prop))
+        if (!session.cat(f).equals(session.Prop))
             return;
 
         // Update goals if necessary
-        for(Map.Entry<Morphism, Goal> entry : new HashSet<>(goals.entrySet())) {
+        for (Map.Entry<Morphism, Goal> entry : new HashSet<>(goals.entrySet())) {
             Goal goal = entry.getValue();
-            if(goal.P.index == f.index) {
+            if (goal.P.index == f.index) {
                 goals.remove(goal.P);
                 goal.P = new Morphism(g.index, goal.P.k);
 
                 // It makes no sense to put True or False back in the map
-                if(!g.equals(session.True) && !g.equals(session.False))
+                if (!g.equals(session.True) && !g.equals(session.False))
                     goals.put(goal.P, goal);
             }
         }

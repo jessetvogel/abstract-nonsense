@@ -198,6 +198,7 @@ public class Parser {
                 session.print("\uD83C\uDF89 Proven!");
             else
                 session.print("\uD83E\uDD7A Could not prove..");
+            prover.detach();
             return;
         }
 
@@ -629,7 +630,7 @@ public class Parser {
 
             if (found(Token.Type.SEPARATOR, ".") && op.compare(MorphismOperator.COMPOSITION)) {
                 consume();
-                Morphism g = parseMorphism(diagram);
+                Morphism g = parseMorphism(diagram, MorphismOperator.COMPOSITION);
                 List<Morphism> fList = new ArrayList<>();
                 fList.add(f);
                 fList.add(g);

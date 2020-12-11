@@ -221,7 +221,7 @@ public class Diagram {
             return Q;
         if (Q.equals(session.True))
             return P;
-        if(P.equals(Q))
+        if (P.equals(Q))
             return P;
 
         // Lookup representation
@@ -239,7 +239,7 @@ public class Diagram {
         return R;
     }
 
-    public Morphism createOr(Representation rep) throws CreationException {
+    private Morphism createOr(Representation rep) throws CreationException {
         Morphism P = rep.data.get(0), Q = rep.data.get(1);
 
         // P and Q must be Propositions
@@ -253,7 +253,7 @@ public class Diagram {
             return Q;
         if (Q.equals(session.False))
             return P;
-        if(P.equals(Q))
+        if (P.equals(Q))
             return P;
 
         // Lookup representation
@@ -289,10 +289,68 @@ public class Diagram {
                 throw new CreationException("Given morphisms do not connect well");
         }
 
+//        // TODO: expand ?
+//        boolean updates = true;
+//        while (updates) {
+//            updates = false;
+//            for (int i = 0; i < n; ++i) {
+//                Morphism f = list.get(i);
+//                for (Representation repf : getRepresentations(f)) {
+//                    if (repf.type != Representation.Type.COMPOSITION)
+//                        continue;
+//
+//                    boolean subs = true;
+//                    for (Morphism g : repf.data) {
+//                        if (g.index >= f.index) {
+//                            subs = false;
+//                            break;
+//                        }
+//                    }
+//
+//                    if(subs) {
+//                        list.remove(i);
+//                        list.addAll(i, repf.data);
+//                        updates = true;
+//                    }
+//                }
+//            }
+//        }
+//
+//        // TODO: collapse ? This is by no means efficient!!
+//        List<Representation> okaySubstitutions = new ArrayList<>();
+//        for(Map.Entry<Representation, Morphism> entry : representations.entrySet()) {
+//            if (entry.getKey().type != Representation.Type.COMPOSITION)
+//                continue;
+//            Morphism f = entry.getValue();
+//            boolean okay = true;
+//            for(Morphism g : entry.getKey().data)
+//                if(g.index <= f.index) {
+//                    okay = false;
+//                    break;
+//                }
+//            if(okay)
+//                okaySubstitutions.add(entry.getKey());
+//        }
+//
+//        updates = true;
+//        while(updates) {
+//            updates = false;
+//            for(Representation r : okaySubstitutions) {
+//                int i = Collections.indexOfSubList(list, r.data);
+//                if (i == -1)
+//                    continue;
+//
+//                list.subList(i, i + r.data.size()).clear();
+//                list.add(i, representations.get(r));
+//
+//                updates = true;
+//            }
+//        }
+
         // Simply remove all identity morphisms
         list.removeIf(session::isIdentity);
 
-        // If the list is empty now, then the result would have been id_X = id_Y
+        // If the list is empty now, then the result would have been id_x = id_y
         n = list.size();
         if (n == 0)
             return session.id(x);
@@ -300,6 +358,7 @@ public class Diagram {
         // If there is only one morphism left, just return that morphism
         if (n == 1)
             return list.get(0);
+
 
         // Lookup representation
         if (representations.containsKey(rep))
@@ -341,8 +400,8 @@ public class Diagram {
             return representations.get(rep);
 
         // Look for alternative representations: if f is of the form G(g), then F(f) = (FG)(g)
-        for(Representation repy : getRepresentations(f)) {
-            if(repy.type != Representation.Type.FUNCTOR_APPLICATION)
+        for (Representation repy : getRepresentations(f)) {
+            if (repy.type != Representation.Type.FUNCTOR_APPLICATION)
                 continue;
 
             Morphism G = repy.data.get(0);
@@ -444,7 +503,7 @@ public class Diagram {
     }
 
     private String wrap(String s) {
-        if(s.matches("^\\w*(\\(.*\\))?$"))
+        if (s.matches("^\\w*(\\(.*\\))?$"))
             return s;
         else
             return "(" + s + ")";
