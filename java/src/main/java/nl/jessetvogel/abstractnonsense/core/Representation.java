@@ -105,7 +105,7 @@ public class Representation {
             case OR:
                 int h1 = data.get(0).hashCode();
                 int h2 = data.get(1).hashCode();
-                return 0xe9fc74ac ^ type.hashCode() ^ (h1 ^ h2) ^ (h1 << 3);
+                return 0xe9fc74ac ^ type.hashCode() ^ ((h1 ^ h2) + 17 * (h1 + h2));
         }
         return 0;
     }
