@@ -154,7 +154,7 @@ public class Parser {
             List<String> identifiers = parseListOfIdentifiers();
             for (String i : identifiers) {
                 if (session.hasSymbol(i))
-                    throw new ParserException(tLet, "Name " + i + " has already been used");
+                    throw new ParserException(tLet, "Symbol " + i + " is already used");
             }
             consume(Token.Type.SEPARATOR, ":");
             Morphism type = parseMorphism(session);
@@ -247,7 +247,7 @@ public class Parser {
             String signature = context.signature();
             for (String name : identifiers) {
                 if (session.hasProperty(name, signature))
-                    throw new ParserException(tProperty, "Property " + name + " with signature " + signature + " already used");
+                    throw new ParserException(tProperty, "Property " + name + " with signature " + signature + " already exists");
 
                 Property property = new Property(context, name, definition);
                 session.addProperty(property);
@@ -262,7 +262,7 @@ public class Parser {
             String name = tIdentifier.data;
 
             if (session.hasTheorem(name))
-                throw new ParserException(tIdentifier, "Theorem name " + name + " already used");
+                throw new ParserException(tIdentifier, "Theorem name " + name + " is already used");
             Theorem thm = new Theorem(session, name);
             consume(Token.Type.SEPARATOR, "{");
             parseImplicits(thm);
@@ -282,7 +282,7 @@ public class Parser {
             String name = consume(Token.Type.IDENTIFIER).data;
 
             if (session.hasExample(name))
-                throw new ParserException(tExample, "Example name " + name + " already used");
+                throw new ParserException(tExample, "Example name " + name + " is already used");
 
             Diagram example = new Diagram(session, session);
             consume(Token.Type.SEPARATOR, "{");
@@ -436,7 +436,7 @@ public class Parser {
             Token tIdentifier = consume(Token.Type.IDENTIFIER);
             String name = tIdentifier.data;
             if (diagram.hasSymbol(name))
-                throw new ParserException(tIdentifier, "Symbol " + name + " has already been used");
+                throw new ParserException(tIdentifier, "Symbol " + name + " is already used");
             consume(Token.Type.SEPARATOR, "=");
             Morphism f = parseMorphism(diagram);
             diagram.assignSymbol(name, f);

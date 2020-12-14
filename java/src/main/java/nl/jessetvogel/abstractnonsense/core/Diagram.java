@@ -12,6 +12,7 @@ public class Diagram {
     public final List<Integer> indices;
     public final Map<Representation, Morphism> representations;
     private final Map<String, Morphism> symbols;
+    private final Rewriter rewriter;
 
     public Diagram(Session session, Diagram parent) {
         this.session = (session != null ? session : (Session) this);
@@ -20,6 +21,7 @@ public class Diagram {
         indices = new ArrayList<>();
         symbols = new LinkedHashMap<>();
         representations = new LinkedHashMap<>();
+        rewriter = new Rewriter(this.session);
 
         if (hasParent())
             parent.children.add(this);
@@ -91,6 +93,9 @@ public class Diagram {
     }
 
     protected void replaceMorphism(Morphism f, Morphism g, List<MorphismPair> induced) throws CreationException {
+        // Replace in rewriter
+        rewriter.replaceMorphism(f, g, induced);
+
         // Replace symbol pointers
         for (Map.Entry<String, Morphism> entry : symbols.entrySet()) {
             Morphism h = entry.getValue();
@@ -289,66 +294,22 @@ public class Diagram {
                 throw new CreationException("Given morphisms do not connect well");
         }
 
-//        // TODO: expand ?
-//        boolean updates = true;
-//        while (updates) {
-//            updates = false;
-//            for (int i = 0; i < n; ++i) {
-//                Morphism f = list.get(i);
-//                for (Representation repf : getRepresentations(f)) {
-//                    if (repf.type != Representation.Type.COMPOSITION)
-//                        continue;
-//
-//                    boolean subs = true;
-//                    for (Morphism g : repf.data) {
-//                        if (g.index >= f.index) {
-//                            subs = false;
-//                            break;
-//                        }
-//                    }
-//
-//                    if(subs) {
-//                        list.remove(i);
-//                        list.addAll(i, repf.data);
-//                        updates = true;
-//                    }
-//                }
-//            }
-//        }
-//
-//        // TODO: collapse ? This is by no means efficient!!
-//        List<Representation> okaySubstitutions = new ArrayList<>();
-//        for(Map.Entry<Representation, Morphism> entry : representations.entrySet()) {
-//            if (entry.getKey().type != Representation.Type.COMPOSITION)
-//                continue;
-//            Morphism f = entry.getValue();
-//            boolean okay = true;
-//            for(Morphism g : entry.getKey().data)
-//                if(g.index <= f.index) {
-//                    okay = false;
-//                    break;
-//                }
-//            if(okay)
-//                okaySubstitutions.add(entry.getKey());
-//        }
-//
-//        updates = true;
-//        while(updates) {
-//            updates = false;
-//            for(Representation r : okaySubstitutions) {
-//                int i = Collections.indexOfSubList(list, r.data);
-//                if (i == -1)
-//                    continue;
-//
-//                list.subList(i, i + r.data.size()).clear();
-//                list.add(i, representations.get(r));
-//
-//                updates = true;
-//            }
-//        }
-
         // Simply remove all identity morphisms
         list.removeIf(session::isIdentity);
+
+        // Apply rewriter of this and its parents
+        boolean updates;
+        do {
+            updates = false;
+            Diagram diagram = this;
+            while(diagram != null) {
+                if(diagram.rewriter.rewrite(list)) {
+                    updates = true;
+                    break;
+                }
+                diagram = diagram.parent;
+            }
+        } while(updates);
 
         // If the list is empty now, then the result would have been id_x = id_y
         n = list.size();
@@ -359,14 +320,15 @@ public class Diagram {
         if (n == 1)
             return list.get(0);
 
+        // TODO: If after rewriting we don't own any of the morphisms, again let the parent create this
+//        if (hasParent() && !ownsAny(list))
+//            return parent.createComposition(rep);
 
-        // Lookup representation
-        if (representations.containsKey(rep))
-            return representations.get(rep);
-
-        // Create morphism
+        // If there is still more than one morphism, this composition is not yet created.
+        // So we create it now, and set the representation. Also, add a new rewrite rule.
         Morphism g = session.createMorphism(this, session.cat(list.get(0)), list.get(0).k, x, y);
         representations.put(rep, g);
+        rewriter.addRule(new ArrayList<>(list), new ArrayList<>(Collections.singleton(g)));
         return g;
     }
 

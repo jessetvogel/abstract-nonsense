@@ -1,10 +1,8 @@
 package nl.jessetvogel.abstractnonsense.prover;
 
-import jdk.jshell.Diag;
 import nl.jessetvogel.abstractnonsense.core.*;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class Exampler {
 

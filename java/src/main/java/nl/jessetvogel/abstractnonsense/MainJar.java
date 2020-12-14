@@ -5,7 +5,7 @@ import nl.jessetvogel.abstractnonsense.parser.*;
 
 import java.io.IOException;
 
-public class Main {
+public class MainJar {
 
     public static void main(String[] args) {
         Session session = new Session();

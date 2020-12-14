@@ -4,7 +4,6 @@ import nl.jessetvogel.abstractnonsense.core.*;
 import nl.jessetvogel.abstractnonsense.core.Representation;
 
 import java.util.*;
-import java.util.concurrent.LinkedTransferQueue;
 
 public class Prover extends Diagram {
 
@@ -21,7 +20,7 @@ public class Prover extends Diagram {
         this.target = target;
 
         goals = new HashMap<>();
-        queue = new LinkedTransferQueue<>();
+        queue = new LinkedList<>();
         implications = new ArrayList<>();
     }
 
