@@ -57,56 +57,6 @@ public class Theorem extends Context {
         return conclusions;
     }
 
-//    private boolean applyConclusion(Mapping mapping) {
-//        // Extend mapping to all morphisms of the conclusion
-//        Set<Map.Entry<Representation, Morphism>> rToMap = new HashSet<>(conclusion.representations.entrySet());
-//        rToMap.removeIf(entry -> mapping.maps(entry.getValue()));
-//        while (!rToMap.isEmpty()) {
-//            for (Iterator<Map.Entry<Representation, Morphism>> it = rToMap.iterator(); it.hasNext(); ) {
-//                Map.Entry<Representation, Morphism> entry = it.next();
-//                List<Morphism> checklist = new ArrayList<>(entry.getKey().data); // These morphisms must be mapped before we can map the value of this representation
-//                checklist.removeIf(x -> !conclusion.owns(x)); // TODO: 'that the conclusion does not own'? Or to be safe just !this.owns(x)
-//                if (!mapping.mapsList(checklist))
-//                    continue;
-//
-//                Morphism y;
-//                try {
-//                    y = mapping.target.createFromRepresentation(entry.getKey(), mapping);
-//                } catch (CreationException e) {
-//                    e.printStackTrace();
-//                    return false;
-//                }
-//
-//                if (!mapping.set(entry.getValue(), y))
-//                    return false;
-//
-//                it.remove();
-//            }
-//        }
-//
-//        // Finally, create objects in other_diagram for all objects that do not have a representation in the conclusion (i.e. mostly proofs of statements)
-//        for (int i : conclusion.indices) {
-//            if (!mapping.maps(i)) {
-//                Morphism x = session.morphism(i);
-//
-//                Morphism y;
-//                try {
-//                    y = session.createMorphism(mapping.target, mapping.map(session.cat(x)), x.k, mapping.map(session.dom(x)), mapping.map(session.cod(x)));
-//                }
-//                catch(CreationException e) {
-//                    System.err.println("Why would this fail???");
-//                    return false;
-//                }
-//
-//                if (!mapping.set(x, y))
-//                    return false;
-//            }
-//        }
-//
-//        System.out.println("Apply Theorem " + name + " to (" + mapping.target.strList(mapping.mapList(data)) + ") to conclude");
-//        return true;
-//    }
-
     @Override
     protected void replaceMorphism(Morphism f, Morphism g, List<MorphismPair> induced) throws CreationException {
         super.replaceMorphism(f, g, induced);

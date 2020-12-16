@@ -1,7 +1,6 @@
 package nl.jessetvogel.abstractnonsense.core;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class Diagram {
 
@@ -77,11 +76,16 @@ public class Diagram {
     }
 
     public boolean ownsAny(List<Morphism> list) {
-        for (Morphism x : list) {
+        for (Morphism x : list)
             if (owns(x))
                 return true;
-        }
         return false;
+    }
+
+    private Diagram owner(List<Morphism> list) {
+        if (!hasParent() || ownsAny(list))
+            return this;
+        return parent.owner(list);
     }
 
     boolean knows(Morphism x) {
@@ -125,7 +129,7 @@ public class Diagram {
                 continue;
 
             representations.remove(rep);
-            rep.data.replaceAll(h -> (h.equals(f) ? g : h));
+            rep.data.replaceAll(h -> (h.index == f.index ? new Morphism(g.index, h.k) : h));
             Morphism h = morphism(rep);
             induced.add(new MorphismPair(entry.getValue(), h));
         }
@@ -142,16 +146,16 @@ public class Diagram {
         if (hasParent() && !ownsAny(rep.data))
             return parent.morphism(rep);
 
-        // Check for immediate returns
-        return switch (rep.type) {
-            case HOM -> createHom(rep);
-            case EQUALITY -> createEquality(rep);
-            case AND -> createAnd(rep);
-            case OR -> createOr(rep);
-            case COMPOSITION -> createComposition(rep);
-            case FUNCTOR_APPLICATION -> createFunctorApplication(rep);
-            case PROPERTY_APPLICATION -> createPropertyApplication(rep);
-        };
+        switch (rep.type) {
+            case HOM: return createHom(rep);
+            case EQUALITY: return createEquality(rep);
+            case AND: return createAnd(rep);
+            case OR: return createOr(rep);
+            case COMPOSITION: return createComposition(rep);
+            case FUNCTOR_APPLICATION: return createFunctorApplication(rep);
+            case PROPERTY_APPLICATION: return createPropertyApplication(rep);
+            default: return null;
+        }
     }
 
     private Morphism createHom(Representation rep) throws CreationException {
@@ -297,19 +301,22 @@ public class Diagram {
         // Simply remove all identity morphisms
         list.removeIf(session::isIdentity);
 
-        // Apply rewriter of this and its parents
+        // Make a copy of the list, that will be used for the representation later on
+        List<Morphism> copy = new ArrayList<>(list);
+
+        // Apply rewriter of this and its parents TODO: alternatively, link the plural rewriter!
         boolean updates;
         do {
             updates = false;
             Diagram diagram = this;
-            while(diagram != null) {
-                if(diagram.rewriter.rewrite(list)) {
+            while (diagram != null) {
+                if (diagram.rewriter.rewrite(list)) {
                     updates = true;
                     break;
                 }
                 diagram = diagram.parent;
             }
-        } while(updates);
+        } while (updates);
 
         // If the list is empty now, then the result would have been id_x = id_y
         n = list.size();
@@ -317,8 +324,10 @@ public class Diagram {
             return session.id(x);
 
         // If there is only one morphism left, just return that morphism
-        if (n == 1)
+        if (n == 1) {
+            representations.put(Representation.composition(copy), list.get(0));
             return list.get(0);
+        }
 
         // TODO: If after rewriting we don't own any of the morphisms, again let the parent create this
 //        if (hasParent() && !ownsAny(list))
@@ -326,7 +335,7 @@ public class Diagram {
 
         // If there is still more than one morphism, this composition is not yet created.
         // So we create it now, and set the representation. Also, add a new rewrite rule.
-        Morphism g = session.createMorphism(this, session.cat(list.get(0)), list.get(0).k, x, y);
+        Morphism g = session.createMorphism(owner(list), session.cat(list.get(0)), list.get(0).k, x, y);
         representations.put(rep, g);
         rewriter.addRule(new ArrayList<>(list), new ArrayList<>(Collections.singleton(g)));
         return g;
@@ -362,12 +371,12 @@ public class Diagram {
             return representations.get(rep);
 
         // Look for alternative representations: if f is of the form G(g), then F(f) = (FG)(g)
-        for (Representation repy : getRepresentations(f)) {
-            if (repy.type != Representation.Type.FUNCTOR_APPLICATION)
+        for (Representation ry : getRepresentations(f)) {
+            if (ry.type != Representation.Type.FUNCTOR_APPLICATION)
                 continue;
 
-            Morphism G = repy.data.get(0);
-            Morphism g = repy.data.get(1);
+            Morphism G = ry.data.get(0);
+            Morphism g = ry.data.get(1);
 
             Morphism FG = morphism(Representation.composition(new ArrayList<>(Arrays.asList(F, G))));
             return morphism(Representation.functorApplication(FG, g));
@@ -431,15 +440,28 @@ public class Diagram {
     }
 
     public String str(Representation rep) {
-        return switch (rep.type) {
-            case HOM -> rep.data.get(1).equals(session.False) ? "~" + wrap(str(rep.data.get(0))) : (wrap(str(rep.data.get(0))) + " -> " + wrap(str(rep.data.get(1))));
-            case EQUALITY -> wrap(str(rep.data.get(0))) + " = " + wrap(str(rep.data.get(1)));
-            case AND -> wrap(str(rep.data.get(0))) + " & " + wrap(str(rep.data.get(1)));
-            case OR -> wrap(str(rep.data.get(0))) + " | " + wrap(str(rep.data.get(1)));
-            case COMPOSITION -> rep.data.stream().map(f -> wrap(str(f))).collect(Collectors.joining("."));
-            case FUNCTOR_APPLICATION -> wrap(str(rep.data.get(0))) + "(" + str(rep.data.get(1)) + ")";
-            case PROPERTY_APPLICATION -> rep.property.name + "(" + strList(rep.data) + ")";
-        };
+        switch (rep.type) {
+            case HOM:
+                return rep.data.get(1).equals(session.False) ? "~" + wrap(str(rep.data.get(0))) : (wrap(str(rep.data.get(0))) + " -> " + wrap(str(rep.data.get(1))));
+            case EQUALITY:
+                return wrap(str(rep.data.get(0))) + " = " + wrap(str(rep.data.get(1)));
+            case AND:
+                return wrap(str(rep.data.get(0))) + " & " + wrap(str(rep.data.get(1)));
+            case OR:
+                return wrap(str(rep.data.get(0))) + " | " + wrap(str(rep.data.get(1)));
+            case COMPOSITION: {
+                StringJoiner sj = new StringJoiner(".");
+                for (Morphism f : rep.data)
+                    sj.add(wrap(str(f)));
+                return sj.toString();
+            }
+            case FUNCTOR_APPLICATION:
+                return wrap(str(rep.data.get(0))) + "(" + str(rep.data.get(1)) + ")";
+            case PROPERTY_APPLICATION:
+                return rep.property.name + "(" + strList(rep.data) + ")";
+            default:
+                return null;
+        }
     }
 
     public String str(Morphism f) {

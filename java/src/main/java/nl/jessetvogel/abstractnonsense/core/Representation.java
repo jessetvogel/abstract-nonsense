@@ -32,15 +32,24 @@ public class Representation {
     }
 
     public Representation map(Mapping m) {
-        return switch(type) {
-            case HOM -> hom(m.map(data.get(0)), m.map(data.get(1)));
-            case EQUALITY -> equality(m.map(data.get(0)), m.map(data.get(1)));
-            case AND -> and(m.map(data.get(0)), m.map(data.get(1)));
-            case OR -> or(m.map(data.get(0)), m.map(data.get(1)));
-            case COMPOSITION -> composition(m.map(data));
-            case FUNCTOR_APPLICATION -> functorApplication(m.map(data.get(0)), m.map(data.get(1)));
-            case PROPERTY_APPLICATION -> propertyApplication(property, m.map(data));
-        };
+        switch (type) {
+            case HOM:
+                return hom(m.map(data.get(0)), m.map(data.get(1)));
+            case EQUALITY:
+                return equality(m.map(data.get(0)), m.map(data.get(1)));
+            case AND:
+                return and(m.map(data.get(0)), m.map(data.get(1)));
+            case OR:
+                return or(m.map(data.get(0)), m.map(data.get(1)));
+            case COMPOSITION:
+                return composition(m.map(data));
+            case FUNCTOR_APPLICATION:
+                return functorApplication(m.map(data.get(0)), m.map(data.get(1)));
+            case PROPERTY_APPLICATION:
+                return propertyApplication(property, m.map(data));
+            default:
+                return null;
+        }
     }
 
     public static Representation hom(Morphism x, Morphism y) {
@@ -67,8 +76,8 @@ public class Representation {
         return new Representation(property, data);
     }
 
-    public static Representation functorApplication(Morphism F, Morphism x) {
-        return new Representation(Type.FUNCTOR_APPLICATION, Arrays.asList(F, x));
+    public static Representation functorApplication(Morphism F, Morphism f) {
+        return new Representation(Type.FUNCTOR_APPLICATION, Arrays.asList(F, f));
     }
 
     @Override
@@ -81,12 +90,21 @@ public class Representation {
 
         if (type != other.type)
             return false;
-        return switch (type) {
-            case HOM, COMPOSITION, FUNCTOR_APPLICATION -> data.equals(other.data);
-            case EQUALITY, AND, OR -> (data.get(0).equals(other.data.get(0)) && data.get(1).equals(other.data.get(1))) ||
-                    (data.get(0).equals(other.data.get(1)) && data.get(1).equals(other.data.get(0)));
-            case PROPERTY_APPLICATION -> property == other.property && data.equals(other.data);
-        };
+        switch (type) {
+            case HOM:
+            case COMPOSITION:
+            case FUNCTOR_APPLICATION:
+                return data.equals(other.data);
+            case EQUALITY:
+            case AND:
+            case OR:
+                return (data.get(0).equals(other.data.get(0)) && data.get(1).equals(other.data.get(1))) ||
+                        (data.get(0).equals(other.data.get(1)) && data.get(1).equals(other.data.get(0)));
+            case PROPERTY_APPLICATION:
+                return property == other.property && data.equals(other.data);
+            default:
+                return false;
+        }
     }
 
     @Override
@@ -99,6 +117,7 @@ public class Representation {
             case FUNCTOR_APPLICATION:
                 return 0xecf348f4 ^ (31 * data.get(0).hashCode()) + data.get(1).hashCode();
             case PROPERTY_APPLICATION:
+                assert property != null;
                 return 0xce870ca1 ^ property.hashCode() ^ data.hashCode();
             case EQUALITY:
             case AND:

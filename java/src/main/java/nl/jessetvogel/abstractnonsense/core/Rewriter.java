@@ -1,36 +1,32 @@
 package nl.jessetvogel.abstractnonsense.core;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.StringJoiner;
+import java.util.*;
 
 public class Rewriter {
 
     private final Session session;
     private final List<Rule> rules;
 
-    private int KBlength;
+    private int KBLength;
 
     public Rewriter(Session session) {
         this.session = session;
         rules = new ArrayList<>();
-
-        KBlength = 0;
+        KBLength = 0;
     }
 
     public void addRule(List<Morphism> input, List<Morphism> output) {
         Rule rule = new Rule(input, output);
         rule.normalize();
         rules.add(rule);
-        knuthBendix();
+        knuthBendix(Set.of(rule));
     }
 
     public boolean rewrite(List<Morphism> word) {
         // Update Knuth--Bendix length if necessary
-        if(word.size() > KBlength) {
-            KBlength = word.size();
-            knuthBendix();
+        if (word.size() > KBLength) {
+            KBLength = word.size();
+            knuthBendix(new HashSet<>(rules));
         }
 
         // Apply rewriting rules
@@ -47,13 +43,14 @@ public class Rewriter {
         return change;
     }
 
-    private void knuthBendix() {
+    private void knuthBendix(Set<Rule> rulesToCheck) {
+        Set<Rule> toCheck = new HashSet<>(rulesToCheck);
         List<Rule> newRules = new ArrayList<>();
         boolean updates;
         do {
             updates = false;
             newRules.clear();
-            for (Rule A : rules) {
+            for (Rule A : toCheck) {
                 for (Rule B : rules) {
                     int nA = A.input.size(), nB = B.input.size();
                     // Search for critical pairs
@@ -86,65 +83,70 @@ public class Rewriter {
                         }
 
                         assert X != null;
-                        if (!X.equals(Y) && (X.size() <= KBlength && Y.size() <= KBlength)) {
+                        if (!X.equals(Y) && (X.size() <= KBLength && Y.size() <= KBLength)) {
                             Rule rule = new Rule(X, Y);
                             rule.normalize();
-                            if(!rule.isTrivial())
+                            if (!rule.isTrivial())
                                 newRules.add(rule);
                         }
                     }
                 }
             }
 
-            // Add non-trivial new rules
+            // Determine toCheck for next iteration: all the new/changed rules
+            toCheck.clear();
+
+            // If there are new rules, add them to 'rules' and 'toCheck' and normalize
             if (!newRules.isEmpty()) {
                 rules.addAll(newRules);
+                toCheck.addAll(newRules);
+                for (Rule rule : rules)
+                    if (rule.normalize())
+                        toCheck.add(rule);
+                rules.removeIf(Rule::isTrivial);
                 updates = true;
             }
-
-            // Normalize all rules & remove trivial rules
-            for(Rule rule : rules)
-                rule.normalize();
-            rules.removeIf(Rule::isTrivial);
 
         } while (updates);
     }
 
-    void replaceMorphism(Morphism f, Morphism g, List<MorphismPair> induced) {
+    void replaceMorphism(Morphism f, Morphism g, List<MorphismPair> induced) throws CreationException {
+        Set<Rule> changedRules = new HashSet<>();
+
         // Replace morphisms in rules
-        for (Rule rule : rules) {
-            rule.input.replaceAll(h -> (h.index == f.index ? new Morphism(g.index, h.k) : h));
-            rule.output.replaceAll(h -> (h.index == f.index ? new Morphism(g.index, h.k) : h));
-            rule.input.removeIf(session::isIdentity);
-            rule.output.removeIf(session::isIdentity);
-            rule.orient();
-        }
+        for (Rule rule : rules)
+            if (rule.replace(f, g))
+                changedRules.add(rule);
 
         // Normalize rules & remove trivial rules
-        for(Rule rule : rules)
-            rule.normalize();
+        for (Rule rule : rules)
+            if (rule.normalize())
+                changedRules.add(rule);
         rules.removeIf(Rule::isTrivial);
 
         // If any rule is now of the form 'x' -> 'y', then identify x with y
         for (Rule rule : rules) {
-            if (rule.input.size() == 1 && rule.output.size() == 1)
-                induced.add(new MorphismPair(rule.input.get(0), rule.output.get(0)));
+            if (rule.input.size() == 1 && rule.output.size() <= 1) {
+                Morphism ff = rule.input.get(0);
+                Morphism gg = rule.output.size() == 1 ? rule.output.get(0) : session.id(session.dom(ff));
+                induced.add(new MorphismPair(ff, gg));
+            }
         }
 
-        knuthBendix();
+        // End with Knuth--Bendix
+        knuthBendix(changedRules);
     }
 
     private class Rule {
 
-        List<Morphism> input;
-        List<Morphism> output;
-        boolean trivial;
+        private List<Morphism> input;
+        private List<Morphism> output;
+        private boolean trivial;
 
         Rule(List<Morphism> input, List<Morphism> output) {
             this.input = input;
             this.output = output;
             orient();
-            trivial = input.equals(output);
         }
 
         boolean apply(List<Morphism> list) {
@@ -160,35 +162,64 @@ public class Rewriter {
             return true;
         }
 
-        boolean isTrivial() {
-            return trivial || (trivial = input.equals(output));
+        private boolean isTrivial() {
+            return trivial;
         }
 
-        void normalize() {
-            boolean updates;
+        private boolean normalize() {
+            boolean change = false, updates;
             do {
                 updates = false;
                 for (Rule rule : rules) {
                     if (rule == this)
                         continue;
-                    if (rule.apply(input) || rule.apply(output)) {
-                        orient();
-                        updates = true;
-                    }
+                    if (rule.apply(input) || rule.apply(output))
+                        updates = change = true;
                 }
             } while (updates);
-            trivial = input.equals(output);
+            if (change)
+                orient();
+            return change;
         }
 
         private void orient() {
-            if (shortlex(input, output) < 0) {
+            int d = shortLex(input, output);
+            if (d < 0) {
                 List<Morphism> tmp = input;
                 input = output;
                 output = tmp;
             }
+            if (d == 0)
+                trivial = true;
         }
 
-        private int shortlex(List<Morphism> s, List<Morphism> t) {
+        private boolean replace(Morphism f, Morphism g) {
+            boolean change = false;
+            for (ListIterator<Morphism> it = input.listIterator(); it.hasNext(); ) {
+                Morphism h = it.next();
+                if (h.index == f.index) {
+                    it.set(new Morphism(g.index, h.k));
+                    change = true;
+                }
+            }
+            for (ListIterator<Morphism> it = output.listIterator(); it.hasNext(); ) {
+                Morphism h = it.next();
+                if (h.index == f.index) {
+                    it.set(new Morphism(g.index, h.k));
+                    change = true;
+                }
+            }
+
+            if (change) {
+                input.removeIf(session::isIdentity);
+                output.removeIf(session::isIdentity);
+                orient();
+            }
+
+            return change;
+        }
+
+        private int shortLex(List<Morphism> s, List<Morphism> t) {
             int d = s.size() - t.size();
             if (d != 0)
                 return d;
@@ -199,7 +230,6 @@ public class Rewriter {
             }
             return 0;
         }
-        
     }
 
 }

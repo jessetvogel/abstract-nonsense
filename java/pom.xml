@@ -8,14 +8,6 @@
     <artifactId>abstract-nonsense</artifactId>
     <version>1.0-SNAPSHOT</version>
 
-    <dependencies>
-        <dependency>
-            <groupId>de.mirkosertic.bytecoder</groupId>
-            <artifactId>bytecoder.api</artifactId>
-            <version>2020-10-05</version>
-        </dependency>
-    </dependencies>
-
     <properties>
         <maven.compiler.source>15</maven.compiler.source>
         <maven.compiler.target>15</maven.compiler.target>
@@ -35,25 +27,6 @@
                     </archive>
                 </configuration>
             </plugin>
-
-<!--            <plugin>-->
-<!--                <groupId>de.mirkosertic.bytecoder</groupId>-->
-<!--                <artifactId>bytecoder-mavenplugin</artifactId>-->
-<!--                <version>2020-10-05</version>-->
-<!--                <configuration>-->
-<!--                    <mainClass>nl.jessetvogel.abstractnonsense.MainWeb</mainClass>-->
-<!--                    <backend>js</backend>-->
-<!--                    <enableExceptionHandling>true</enableExceptionHandling>-->
-<!--                    <optimizationLevel>ALL</optimizationLevel>-->
-<!--                </configuration>-->
-<!--                <executions>-->
-<!--                    <execution>-->
-<!--                        <goals>-->
-<!--                            <goal>compile</goal>-->
-<!--                        </goals>-->
-<!--                    </execution>-->
-<!--                </executions>-->
-<!--            </plugin>-->
         </plugins>
     </build>
     

@@ -1,2 +1,2 @@
 Manifest-Version: 1.0
-Main-Class: nl.jessetvogel.abstractnonsense.MainJar
+Main-Class: nl.jessetvogel.abstractnonsense.Main

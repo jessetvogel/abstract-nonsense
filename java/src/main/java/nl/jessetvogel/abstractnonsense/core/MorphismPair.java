@@ -8,4 +8,5 @@ public class MorphismPair {
         this.f = f;
         this.g = g;
     }
+
 }

@@ -53,7 +53,7 @@ public class Mapping {
                 return false;
         }
 
-//        // TODO: CAN DO MORE HERE ALREADY
+//        // TODO: CAN DO MORE HERE ALREADY ??
 //        // TODO: maybe already map everything that depends on what is currently mapped
 
         return true;
@@ -96,12 +96,9 @@ public class Mapping {
 
     public boolean valid() {
         // All context data must be mapped
-        for (Morphism x : context.data) {
-            if (!determined(x)) {
-//                System.out.println("Not all data is mapped");
+        for (Morphism x : context.data)
+            if (!determined(x))
                 return false;
-            }
-        }
 
         // Make sure all representations are well-mapped
         Set<Map.Entry<Representation, Morphism>> rToMap = new HashSet<>(context.representations.entrySet());
