@@ -316,26 +316,49 @@ public class Parser {
 
         if (found(Token.Type.KEYWORD, "inspect")) {
             Token tInspect = consume();
-            String name = consume(Token.Type.IDENTIFIER).data;
 
-            Diagram diagram = null;
-            if (name.equals("session"))
-                diagram = session;
+            if(found(Token.Type.IDENTIFIER)) {
+                String name = consume(Token.Type.IDENTIFIER).data;
 
-            if (diagram == null)
-                diagram = session.getExample(name);
-            if (diagram == null)
-                diagram = session.getTheorem(name);
-            if (diagram == null)
-                diagram = session.getProperty(name, "(0)").context;
-            if (diagram == null)
-                throw new ParserException(tInspect, "No results for '" + name + "'");
+                Diagram diagram = null;
+                if (name.equals("session"))
+                    diagram = session;
 
-            List<Integer> list = new ArrayList<>(diagram.indices);
-            for (int index : list) {
-                // Do not display categories of n-categories
-                if (session.nCat.contains(index))
-                    continue;
+                if (diagram == null)
+                    diagram = session.getExample(name);
+                if (diagram == null)
+                    diagram = session.getTheorem(name);
+                if (diagram == null)
+                    diagram = session.getProperty(name, "(0)").context;
+                if (diagram == null)
+                    throw new ParserException(tInspect, "No results for '" + name + "'");
+
+                List<Integer> list = new ArrayList<>(diagram.indices);
+                for (int index : list) {
+                    // Do not display categories of n-categories
+                    if (session.nCat.contains(index))
+                        continue;
+
+                    // Because we do not know which k to expect..
+                    Morphism f = null;
+                    int k = -1;
+                    while (f == null && k < 3)
+                        f = session.morphismFromIndex(index, ++k);
+                    if (f == null)
+                        continue;
+
+                    if (f.k == 0)
+                        session.print("[" + f.index + "] " + diagram.str(f) + " : " + diagram.str(session.cat(f)));
+                    else
+                        session.print("[" + f.index + "] " + diagram.str(f) + " : " + diagram.str(session.dom(f)) + " -> " + diagram.str(session.cod(f)) + " (" + f.k + "-morphism in " + diagram.str(session.cat(f)) + ")");
+                }
+
+                consume();
+                return;
+            }
+
+            if(found(Token.Type.NUMBER)) {
+                int index = Integer.parseInt(consume().data);
 
                 // Because we do not know which k to expect..
                 Morphism f = null;
@@ -343,15 +366,19 @@ public class Parser {
                 while (f == null && k < 3)
                     f = session.morphismFromIndex(index, ++k);
                 if (f == null)
-                    continue;
+                    return;
 
+                Diagram diagram = session.owner(f);
                 if (f.k == 0)
                     session.print("[" + f.index + "] " + diagram.str(f) + " : " + diagram.str(session.cat(f)));
                 else
                     session.print("[" + f.index + "] " + diagram.str(f) + " : " + diagram.str(session.dom(f)) + " -> " + diagram.str(session.cod(f)) + " (" + f.k + "-morphism in " + diagram.str(session.cat(f)) + ")");
+                
+                for(Representation rep : diagram.getRepresentations(f))
+                    session.print("[" + f.index + "] " + diagram.str(rep));
+                return;
             }
 
-            consume();
             return;
         }
 
@@ -437,7 +464,7 @@ public class Parser {
             String name = tIdentifier.data;
             if (diagram.hasSymbol(name))
                 throw new ParserException(tIdentifier, "Symbol " + name + " is already used");
-            consume(Token.Type.SEPARATOR, "=");
+            consume(Token.Type.SEPARATOR, ":=");
             Morphism f = parseMorphism(diagram);
             diagram.assignSymbol(name, f);
         }

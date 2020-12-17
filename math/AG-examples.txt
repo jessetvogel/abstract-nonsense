@@ -1,6 +1,6 @@
 example ZZ {
     let ZZ : Ring
-    write X = Spec(ZZ)
+    write X := Spec(ZZ)
     with
         irreducible(X),
         locally_noetherian(X),
@@ -15,7 +15,7 @@ example ZZ {
 
 example QQ {
     let QQ : Ring
-    write X = Spec(QQ)
+    write X := Spec(QQ)
     with
         qcompact(X),
         cohen_macaulay(X),
@@ -31,7 +31,7 @@ example QQ {
 
 example affine_line_over_QQ {
     let QQ_x : Ring
-    write X = Spec(QQ_x)
+    write X := Spec(QQ_x)
 }
 
 

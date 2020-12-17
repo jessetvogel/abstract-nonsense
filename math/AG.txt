@@ -1,4 +1,5 @@
 # import "/Users/jessevogel/Projects/abstract-nonsense/math/AG.txt"
+# import "/Users/jessevogel/Projects/abstract-nonsense/math/test_sudoku_hard.txt"
 
 import "AG-definitions.txt"
 import "AG-examples.txt"
