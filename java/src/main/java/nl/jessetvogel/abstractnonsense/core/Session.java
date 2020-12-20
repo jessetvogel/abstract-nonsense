@@ -264,8 +264,6 @@ public class Session extends Diagram {
             df = owner(f); // Update owner
         }
 
-//        System.out.println("(Identifying " + df.str(f) + "[" + f.index + "] with " + df.str(g) + "[" + g.index + "])");
-
         // Make changes in MorphismInfo
         for (MorphismInfo info : morphismInfo.values()) {
             if (info.cat == f.index) info.cat = g.index;
@@ -326,7 +324,6 @@ public class Session extends Diagram {
 
         // Set identifications
         identifications.put(f.index, g.index);
-//        System.out.println("Put identification [" + f.index + "] -> [" + g.index + "]");
 
         for (MorphismPair pair : inducedIdentifications)
             identify(pair.f, pair.g);
@@ -342,6 +339,16 @@ public class Session extends Diagram {
 
     public Diagram owner(Morphism f) {
         return owners.get(f.index);
+    }
+
+    public Morphism morphismFromIndex(int index) {
+        MorphismInfo info = morphismInfo.get(index);
+        if (info == null)
+            return null;
+
+        Morphism f = new Morphism(index, info.k);
+        f.info = info;
+        return f;
     }
 
     public Morphism morphismFromIndex(int index, int k) {
@@ -362,10 +369,6 @@ public class Session extends Diagram {
         for (Morphism f : list)
             sj.add(String.valueOf(f.k));
         return sj.toString();
-    }
-
-    public void print(String message) {
-        System.out.println(message);
     }
 
 }

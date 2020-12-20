@@ -141,14 +141,6 @@ public class Searcher extends Mapping {
             // Set queue and lists of induced mappings
             setQueue();
             setInduced();
-
-            // Print the plan
-//            System.out.println("Search queue: " + context.strList(queue));
-//            int i = 0;
-//            for(List<Representation> list : induced) {
-//                // TODO: printing not very nice, because all assumptions are already mapped to True..
-//                System.out.println("(" + (i++) + ") induces " + context.strList(list.stream().map(context.representations::get).collect(Collectors.toList())));
-//            }
         }
 
         private void setQueue() {

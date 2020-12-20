@@ -3,12 +3,12 @@ package nl.jessetvogel.abstractnonsense.parser;
 import java.io.IOException;
 import java.io.InputStream;
 
-public class Scanner {
+class Scanner {
 
-    InputStream stream;
-    public int line = 1, position = 0;
+    final InputStream stream;
+    int line = 1, column = 0;
 
-    public Scanner(InputStream stream) {
+    Scanner(InputStream stream) {
         this.stream = stream;
     }
 
@@ -20,10 +20,10 @@ public class Scanner {
         Character c = (char) r;
         if(c.equals('\n')) {
             line ++;
-            position = 0;
+            column = 0;
         }
         else
-            position ++;
+            column++;
         return c;
     }
 

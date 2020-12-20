@@ -63,4 +63,8 @@ public class Theorem extends Context {
         conditions.replaceAll(z -> (z.index == f.index ? new Morphism(g.index, z.k) : z));
         conclusions.replaceAll(z -> (z.index == f.index ? new Morphism(g.index, z.k) : z));
     }
+
+    public List<Morphism> getConditions() {
+        return conditions;
+    }
 }

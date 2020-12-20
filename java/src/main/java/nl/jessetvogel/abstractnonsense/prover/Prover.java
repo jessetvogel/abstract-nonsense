@@ -9,16 +9,16 @@ public class Prover extends Diagram {
 
     private final Diagram target;
 
+    private final List<String> proof;
     private final Map<Morphism, Goal> goals;
     private final Queue<Goal> queue;
     private final List<Implication> implications;
-
-    private List<String> proof;
 
     public Prover(Session session, Diagram target) {
         super(session, target);
         this.target = target;
 
+        proof = new ArrayList<>();
         goals = new HashMap<>();
         queue = new LinkedList<>();
         implications = new ArrayList<>();
@@ -29,8 +29,8 @@ public class Prover extends Diagram {
         if (!session.cat(P).equals(session.Prop))
             return false;
 
-        // Create a new list to contain the proof
-        proof = new ArrayList<>();
+        // Prepare for a new proof
+        proof.clear();
 
         // Create goal for P
         Goal finalGoal = createGoal(P, money);
@@ -48,15 +48,15 @@ public class Prover extends Diagram {
             considerGoal(goal);
         }
 
-        // Print the proof
-        for (String line : proof)
-            session.print("\uD83D\uDCA1 " + line);
-
         return finalGoal.isProven();
     }
 
+    public List<String> getProof() {
+        return new ArrayList<>(proof);
+    }
+
     private void considerGoal(Goal goal) {
-        session.print("\uD83D\uDCCC Consider the goal " + target.str(goal.P) + " ($" + goal.money + ")");
+        System.out.println("\uD83D\uDCCC Consider the goal " + target.str(goal.P) + " ($" + goal.money + ")");
 
         // If there is no money left, we can't buy anything!
         if (goal.money == 0)

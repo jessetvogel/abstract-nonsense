@@ -4,21 +4,21 @@ import java.io.IOException;
 import java.util.List;
 import java.util.regex.Pattern;
 
-public class Lexer {
+class Lexer {
 
-    public static final List<String> KEYWORDS = List.of("exit", "import", "id", "dom", "cod", "cat", "let", "assume", "prove", "apply", "property", "theorem", "example", "search", "use", "with", "then", "write", "def", "exists", "check", "debug", "inspect");
-    public static final List<String> SEPARATORS = List.of("(", ")", "{", "}", "=", ".", ",", ":", ":=", "->", "=>", "&", "|", "~", ";");
-    public static final Pattern PATTERN_NUMBERS = Pattern.compile("^\\d+$");
-    public static final Pattern PATTERN_IDENTIFIERS = Pattern.compile("^\\w+$");
-    public static final Pattern PATTERN_STRING = Pattern.compile("^\"[^\"]*\"$");
+    private static final List<String> KEYWORDS = List.of("exit", "import", "id", "dom", "cod", "cat", "let", "assume", "prove", "apply", "property", "theorem", "example", "search", "use", "with", "then", "write", "def", "exists", "check", "debug", "inspect");
+    private static final List<String> SEPARATORS = List.of("(", ")", "{", "}", "=", ".", ",", ":", ":=", "->", "=>", "&", "|", "~", ";");
+    private static final Pattern PATTERN_NUMBERS = Pattern.compile("^\\d+$");
+    private static final Pattern PATTERN_IDENTIFIERS = Pattern.compile("^\\w+$");
+    private static final Pattern PATTERN_STRING = Pattern.compile("^\"[^\"]*\"$");
 
     private final Scanner scanner;
 
     private Token currentToken = null;
     private final StringBuilder sb;
-    private int line = 0, position = 1;
+    private int line = 0, column = 1;
 
-    public Lexer(Scanner scanner) {
+    Lexer(Scanner scanner) {
         this.scanner = scanner;
         sb = new StringBuilder();
     }
@@ -31,7 +31,7 @@ public class Lexer {
             // End of file
             if (c == null) {
                 if (sb.length() == 0)
-                    return new Token(Token.Type.EOF, null, line, position);
+                    return new Token(Token.Type.EOF, null, line, column);
 
                 if (!tokenize(sb.toString()))
                     throw new LexerException("Unexpected end of file");
@@ -60,15 +60,15 @@ public class Lexer {
                     sb.append(c);
 
                 line = scanner.line;
-                position = scanner.position;
+                column = scanner.column;
                 tokenize(sb.toString());
                 return (token != null) ? token : getToken();
             }
 
-            // If string buffer is empty, set line and position of next token
+            // If string buffer is empty, set line and column of next token
             if (sb.length() == 0) {
                 line = scanner.line;
-                position = scanner.position;
+                column = scanner.column;
             }
 
             // Enlarge the token if possible
@@ -86,7 +86,7 @@ public class Lexer {
             Token token = makeToken();
             sb.append(c);
             line = scanner.line;
-            position = scanner.position;
+            column = scanner.column;
             tokenize(sb.toString());
             return token;
         }
@@ -112,7 +112,7 @@ public class Lexer {
             return false;
 
         if (currentToken == null)
-            currentToken = new Token(type, str, line, position);
+            currentToken = new Token(type, str, line, column);
         else {
             currentToken.type = type;
             currentToken.data = str;
@@ -128,6 +128,22 @@ public class Lexer {
         currentToken = null;
         sb.setLength(0);
         return token;
+    }
+
+    class LexerException extends Exception {
+
+        private final int l, c;
+
+        LexerException(String message) {
+            super(message);
+            l = line;
+            c = column;
+        }
+
+        public String getMessage() {
+            return "" + l + ":" + c + ": " + super.getMessage();
+        }
+
     }
 
 }

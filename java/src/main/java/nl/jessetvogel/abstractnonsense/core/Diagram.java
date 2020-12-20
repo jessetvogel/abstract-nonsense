@@ -465,20 +465,22 @@ public class Diagram {
     }
 
     public String str(Morphism f) {
+        if(hasParent() && !owns(f))
+            return parent.str(f);
+
+        // For identity morphisms
         if (session.isIdentity(f))
             return "id(" + str(new Morphism(f.index, f.k - 1)) + ")";
 
         // Preferably use symbols
-        for (Map.Entry<String, Morphism> entry : symbols.entrySet()) {
+        for (Map.Entry<String, Morphism> entry : symbols.entrySet())
             if (entry.getValue().equals(f))
                 return entry.getKey();
-        }
 
         // Use the first-defined representation
-        for (Map.Entry<Representation, Morphism> entry : representations.entrySet()) {
+        for (Map.Entry<Representation, Morphism> entry : representations.entrySet())
             if (entry.getValue().equals(f))
                 return str(entry.getKey());
-        }
 
         if (hasParent() && !owns(f))
             return parent.str(f);
@@ -501,4 +503,7 @@ public class Diagram {
         indices.remove(index);
     }
 
+    public Session getSession() {
+        return session;
+    }
 }

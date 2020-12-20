@@ -14,12 +14,11 @@ public class Exampler {
         this.context = context;
     }
 
-    public void search() {
-        boolean results = false;
+    public List<String> search() {
+        List<String> results = new ArrayList<>();
 
         List<Map.Entry<String, Diagram>> diagrams = new ArrayList<>(session.getExamples());
         diagrams.add(new AbstractMap.SimpleEntry<>("session", session));
-
         for (Map.Entry<String, Diagram> example : diagrams) {
             String name = example.getKey();
             Diagram diagram = example.getValue();
@@ -45,17 +44,11 @@ public class Exampler {
                         sj.add(m.target.str(f));
                     }
                 }
-                session.print("\uD83D\uDCD6 [" + name + "] " + sj.toString());
-                results = true;
+                results.add("\uD83D\uDCD6 [" + name + "] " + sj.toString());
             }
         }
 
-        // Print results
-        if (!results) {
-            session.print("\uD83E\uDD7A No examples found");
-            return;
-        }
-
+        return results;
     }
 
 }

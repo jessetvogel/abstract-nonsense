@@ -4,18 +4,19 @@ import nl.jessetvogel.abstractnonsense.core.*;
 import nl.jessetvogel.abstractnonsense.prover.Exampler;
 import nl.jessetvogel.abstractnonsense.prover.Prover;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.StringJoiner;
 
 public class Parser {
-
+    private final OutputStream out;
     private final Session session;
+
     private final Lexer lexer;
+    private String filename, directory;
     private Token currentToken;
-    private String directory;
 
     private enum MorphismOperator {
         NONE(0), EQUALITY(1), HOM(2), AND(3), OR(4), COMPOSITION(5), NEGATION(6), FUNCTOR(7);
@@ -31,42 +32,56 @@ public class Parser {
         }
     }
 
-    public Parser(Lexer lexer, Session session) {
-        this.lexer = lexer;
+    public enum OutputFormat { PLAIN, JSON }
+
+    private OutputFormat format = OutputFormat.PLAIN;
+
+    public Parser(InputStream in, OutputStream out, Session session) {
+        this.out = out;
         this.session = session;
+
+        lexer = new Lexer(new Scanner(in));
         directory = "";
+        filename = "";
         currentToken = null;
     }
 
-    public void setDirectory(String directory) {
+    public void setLocation(String directory, String filename) {
         this.directory = directory;
+        this.filename = filename;
     }
 
-    private void nextToken() throws IOException, LexerException {
+    public void setOutputFormat(OutputFormat format) {
+        this.format = format;
+    }
+
+    // ---- Token methods ----
+
+    private void nextToken() throws IOException, Lexer.LexerException {
         currentToken = lexer.getToken();
         if (currentToken.type == Token.Type.NEWLINE)
             nextToken();
     }
 
-    private boolean found(Token.Type type) throws IOException, LexerException {
+    private boolean found(Token.Type type) throws IOException, Lexer.LexerException {
         return found(type, null);
     }
 
-    private boolean found(Token.Type type, String data) throws IOException, LexerException {
+    private boolean found(Token.Type type, String data) throws IOException, Lexer.LexerException {
         if (currentToken == null)
             nextToken();
         return type == null || (currentToken.type == type && (data == null || data.equals(currentToken.data)));
     }
 
-    private Token consume() throws IOException, LexerException, ParserException {
+    private Token consume() throws IOException, Lexer.LexerException, ParserException {
         return consume(null, null);
     }
 
-    private Token consume(Token.Type type) throws IOException, LexerException, ParserException {
+    private Token consume(Token.Type type) throws IOException, Lexer.LexerException, ParserException {
         return consume(type, null);
     }
 
-    private Token consume(Token.Type type, String data) throws IOException, LexerException, ParserException {
+    private Token consume(Token.Type type, String data) throws IOException, Lexer.LexerException, ParserException {
         if (found(type, data)) {
             Token token = currentToken;
             currentToken = null;
@@ -76,21 +91,30 @@ public class Parser {
         }
     }
 
-    public boolean parse() throws IOException, LexerException, ParserException {
-        while (!found(Token.Type.EOF)) {
-            parseStatement(session);
-            if (session.contradiction()) {
-                session.print("\u26A1 Contradiction!");
-                return false;
+    // ---- Parsing methods ----
+
+    public boolean parse() {
+        try {
+            while (!found(Token.Type.EOF)) {
+                parseStatement();
+                if (session.contradiction()) {
+                    output(new Message(Message.Type.INFO, "\u26A1 Contradiction!"));
+                    return false;
+                }
             }
+            consume(Token.Type.EOF);
+        } catch (ParserException e) {
+            output(new Message(Message.Type.ERROR, "\u26A0\uFE0F " + e.getMessage()));
+        } catch (Lexer.LexerException e) {
+            output(new Message(Message.Type.ERROR, "\u26A0\uFE0F " + (filename.equals("") ? "" : filename + ":") + e.getMessage()));
+        } catch (IOException e) {
+            output(new Message(Message.Type.ERROR, "\u26A0\uFE0F IOException: " + e.getMessage()));
         }
-        consume(Token.Type.EOF);
+
         return true;
     }
 
-    // -------- Parse Functions ------------
-
-    private void parseStatement(Session session) throws ParserException, IOException, LexerException {
+    private void parseStatement() throws ParserException, IOException, Lexer.LexerException {
         /* STATEMENT =
                 ; |
                 exit |
@@ -129,10 +153,9 @@ public class Parser {
             if (!file.isFile())
                 throw new ParserException(tImport, "File '" + filename + "' not found");
 
-            Scanner scanner = new Scanner(new FileInputStream(file));
-            Lexer lexer = new Lexer(scanner);
-            Parser parser = new Parser(lexer, session);
-            parser.setDirectory(file.getAbsoluteFile().getParent() + File.separator);
+            Parser parser = new Parser(new FileInputStream(file), out, session);
+            parser.setLocation(file.getAbsoluteFile().getParent() + File.separator, file.getName());
+            parser.setOutputFormat(format);
             parser.parse();
             return;
         }
@@ -140,12 +163,7 @@ public class Parser {
         if (found(Token.Type.KEYWORD, "check")) {
             consume();
             Morphism f = parseMorphism(session);
-            String type;
-            if (f.k == 0)
-                type = session.str(session.cat(f));
-            else
-                type = session.str(session.dom(f)) + " -> " + session.str(session.cod(f)) + " (" + f.k + "-morphism in " + session.str(session.cat(f));
-            session.print(session.str(f) + " : " + type + " (index " + f.index + ")");
+            output(new Message(Message.Type.INFO, (new Inspector(session)).inspect(f) + " (index " + f.index + ")"));
             return;
         }
 
@@ -194,10 +212,14 @@ public class Parser {
             if (!session.cat(P).equals(session.Prop))
                 throw new ParserException(tProve, "Prove requires a Proposition");
             Prover prover = new Prover(session, session);
-            if (prover.prove(P, 10))
-                session.print("\uD83C\uDF89 Proven!");
+            if (prover.prove(P, 10)) {
+                StringJoiner sj = new StringJoiner("\n");
+                for(String line : prover.getProof())
+                    sj.add(line);
+                output(new Message(Message.Type.INFO, "\uD83C\uDF89 Proven!\n" + sj.toString()));
+            }
             else
-                session.print("\uD83E\uDD7A Could not prove..");
+                output(new Message(Message.Type.INFO, "\uD83E\uDD7A Could not prove.."));
             prover.detach();
             return;
         }
@@ -208,7 +230,7 @@ public class Parser {
             String name = tIdentifier.data;
             Theorem thm = session.getTheorem(name);
             if (thm == null)
-                throw new ParserException(tIdentifier, "Unknown theorem " + name);
+                throw new ParserException(tIdentifier, "Unknown theorem '" + name + "'");
             consume(Token.Type.SEPARATOR, "(");
             Mapping mapping = thm.createMappingFromData(session, parseListOfMorphisms(session));
             consume(Token.Type.SEPARATOR, ")");
@@ -217,9 +239,9 @@ public class Parser {
             if (mapping != null)
                 result = thm.apply(mapping);
             if (result == null)
-                session.print("\u2757 Theorem does not apply to given data");
+                output(new Message(Message.Type.INFO, "\u2757 Theorem does not apply to given data"));
             else if (!result.isEmpty())
-                session.print("\uD83D\uDCA1 The following conditions must be satisfied: " + session.strList(result));
+                output(new Message(Message.Type.INFO, "\uD83D\uDCA1 The following conditions must be satisfied: " + session.strList(result)));
             return;
         }
 
@@ -307,7 +329,11 @@ public class Parser {
             consume(Token.Type.SEPARATOR, "}");
 
             Exampler ex = new Exampler(session, context);
-            ex.search();
+            StringJoiner sj = new StringJoiner("\n");
+            sj.setEmptyValue("\uD83E\uDD7A No examples found");
+            for(String result : ex.search())
+                sj.add(result);
+            output(new Message(Message.Type.INFO, sj.toString()));
             context.detach();
             return;
         }
@@ -317,75 +343,59 @@ public class Parser {
         if (found(Token.Type.KEYWORD, "inspect")) {
             Token tInspect = consume();
 
-            if(found(Token.Type.IDENTIFIER)) {
-                String name = consume(Token.Type.IDENTIFIER).data;
-
-                Diagram diagram = null;
-                if (name.equals("session"))
-                    diagram = session;
-
-                if (diagram == null)
-                    diagram = session.getExample(name);
-                if (diagram == null)
-                    diagram = session.getTheorem(name);
-                if (diagram == null)
-                    diagram = session.getProperty(name, "(0)").context;
-                if (diagram == null)
-                    throw new ParserException(tInspect, "No results for '" + name + "'");
-
-                List<Integer> list = new ArrayList<>(diagram.indices);
-                for (int index : list) {
-                    // Do not display categories of n-categories
-                    if (session.nCat.contains(index))
-                        continue;
-
-                    // Because we do not know which k to expect..
-                    Morphism f = null;
-                    int k = -1;
-                    while (f == null && k < 3)
-                        f = session.morphismFromIndex(index, ++k);
-                    if (f == null)
-                        continue;
-
-                    if (f.k == 0)
-                        session.print("[" + f.index + "] " + diagram.str(f) + " : " + diagram.str(session.cat(f)));
-                    else
-                        session.print("[" + f.index + "] " + diagram.str(f) + " : " + diagram.str(session.dom(f)) + " -> " + diagram.str(session.cod(f)) + " (" + f.k + "-morphism in " + diagram.str(session.cat(f)) + ")");
-                }
-
+            if (found(Token.Type.KEYWORD, "theorem")) {
                 consume();
+                String name = consume(Token.Type.IDENTIFIER).data;
+                Theorem theorem = session.getTheorem(name);
+                if (theorem == null)
+                    throw new ParserException(tInspect, "Theorem not found");
+                output(new Message(Message.Type.INFO, (new Inspector(session)).inspect(theorem)));
                 return;
             }
 
-            if(found(Token.Type.NUMBER)) {
+            if (found(Token.Type.KEYWORD, "property")) {
+                consume();
+                String name = consume(Token.Type.IDENTIFIER).data;
+                String signature = parseSignature();
+                Property property = session.getProperty(name, signature);
+                if (property == null)
+                    throw new ParserException(tInspect, "Property not found");
+                output(new Message(Message.Type.INFO, (new Inspector(session)).inspect(property)));
+                return;
+            }
+
+            if (found(Token.Type.KEYWORD, "example")) {
+                consume();
+                String name = consume(Token.Type.IDENTIFIER).data;
+                Diagram example = session.getExample(name);
+                if (example == null)
+                    throw new ParserException(tInspect, "Example not found");
+                output(new Message(Message.Type.INFO, (new Inspector(session)).inspect(example)));
+                return;
+            }
+
+            if (found(Token.Type.IDENTIFIER, "session")) {
+                consume();
+                output(new Message(Message.Type.INFO, (new Inspector(session)).inspect(session)));
+                return;
+            }
+
+            if (found(Token.Type.NUMBER)) {
                 int index = Integer.parseInt(consume().data);
-
-                // Because we do not know which k to expect..
-                Morphism f = null;
-                int k = -1;
-                while (f == null && k < 3)
-                    f = session.morphismFromIndex(index, ++k);
+                Morphism f = session.morphismFromIndex(index);
                 if (f == null)
-                    return;
-
-                Diagram diagram = session.owner(f);
-                if (f.k == 0)
-                    session.print("[" + f.index + "] " + diagram.str(f) + " : " + diagram.str(session.cat(f)));
-                else
-                    session.print("[" + f.index + "] " + diagram.str(f) + " : " + diagram.str(session.dom(f)) + " -> " + diagram.str(session.cod(f)) + " (" + f.k + "-morphism in " + diagram.str(session.cat(f)) + ")");
-                
-                for(Representation rep : diagram.getRepresentations(f))
-                    session.print("[" + f.index + "] " + diagram.str(rep));
+                    throw new ParserException(tInspect, "No morphism with index " + index);
+                output(new Message(Message.Type.INFO, (new Inspector(session)).inspect(f)));
                 return;
             }
 
-            return;
+            throw new ParserException(tInspect, "Unexpected token");
         }
 
-        throw new ParserException(currentToken, "Unable to parse statement (" + currentToken.data + ")");
+        throw new ParserException(currentToken, "Unable to parse statement '" + currentToken.data + "'");
     }
 
-    private void parseImplicits(Diagram diagram) throws ParserException, IOException, LexerException {
+    private void parseImplicits(Diagram diagram) throws ParserException, IOException, Lexer.LexerException {
         /*  IMPLICITS =
                 use LIST_OF_IDENTIFIERS : TYPE ( , LIST_OF_IDENTIFIERS : TYPE )*
          */
@@ -415,7 +425,7 @@ public class Parser {
         }
     }
 
-    private void parseGivens(Diagram diagram) throws ParserException, IOException, LexerException {
+    private void parseGivens(Diagram diagram) throws ParserException, IOException, Lexer.LexerException {
         /*  GIVENS =
                 let LIST_OF_IDENTIFIERS : TYPE ( , LIST_OF_IDENTIFIERS : TYPE )*
          */
@@ -450,7 +460,7 @@ public class Parser {
         }
     }
 
-    private void parseWrites(Diagram diagram) throws ParserException, IOException, LexerException {
+    private void parseWrites(Diagram diagram) throws ParserException, IOException, Lexer.LexerException {
         /*  WRITES =
                 write IDENTIFIER = MORPHISM ( , IDENTIFIER = MORPHISM )*
          */
@@ -470,7 +480,7 @@ public class Parser {
         }
     }
 
-    private void parseConditions(Theorem theorem) throws ParserException, IOException, LexerException {
+    private void parseConditions(Theorem theorem) throws ParserException, IOException, Lexer.LexerException {
         /*  CONDITIONS =
                 with LIST_OF_MORPHISMS
          */
@@ -486,7 +496,7 @@ public class Parser {
         }
     }
 
-    private void parseAssumptions(Diagram diagram) throws ParserException, IOException, LexerException {
+    private void parseAssumptions(Diagram diagram) throws ParserException, IOException, Lexer.LexerException {
         /*  ASSUMPTIONS =
                 with LIST_OF_MORPHISMS
          */
@@ -511,7 +521,7 @@ public class Parser {
         }
     }
 
-    private void parseConclusions(Theorem theorem) throws ParserException, IOException, LexerException {
+    private void parseConclusions(Theorem theorem) throws ParserException, IOException, Lexer.LexerException {
         /*  CONCLUSIONS =
                 then LIST_OF_MORPHISMS
          */
@@ -524,7 +534,7 @@ public class Parser {
         }
     }
 
-    private List<String> parseListOfIdentifiers() throws ParserException, IOException, LexerException {
+    private List<String> parseListOfIdentifiers() throws ParserException, IOException, Lexer.LexerException {
         /*  LIST_OF_IDENTIFIERS =
                 IDENTIFIER ( , IDENTIFIER )+
          */
@@ -538,11 +548,11 @@ public class Parser {
         return identifiers;
     }
 
-    private Morphism parseMorphism(Diagram diagram) throws ParserException, IOException, LexerException {
+    private Morphism parseMorphism(Diagram diagram) throws ParserException, IOException, Lexer.LexerException {
         return parseMorphism(diagram, MorphismOperator.NONE);
     }
 
-    private Morphism parseMorphism(Diagram diagram, MorphismOperator op) throws ParserException, IOException, LexerException {
+    private Morphism parseMorphism(Diagram diagram, MorphismOperator op) throws ParserException, IOException, Lexer.LexerException {
         /*  MORPHISM =
                 \( MORPHISM \) |
                 id \( MORPHISM \) |
@@ -621,7 +631,7 @@ public class Parser {
                         throw new ParserException(tIdentifier, e.getMessage());
                     }
                 } else {
-                    throw new ParserException(tIdentifier, "Unknown identifier " + name);
+                    throw new ParserException(tIdentifier, "Unknown identifier '" + name + "'");
                 }
             }
         } else if (found(Token.Type.SEPARATOR, "~")) {
@@ -719,7 +729,7 @@ public class Parser {
         return f;
     }
 
-    private List<Morphism> parseListOfMorphisms(Diagram diagram) throws ParserException, IOException, LexerException {
+    private List<Morphism> parseListOfMorphisms(Diagram diagram) throws ParserException, IOException, Lexer.LexerException {
         /*  LIST_OF_OBJECTS =
                 OBJECT { , OBJECT }
          */
@@ -733,6 +743,45 @@ public class Parser {
         }
 
         return morphisms;
+    }
+
+    private String parseSignature() throws ParserException, IOException, Lexer.LexerException {
+        StringJoiner sj = new StringJoiner(",", "(", ")");
+        consume(Token.Type.SEPARATOR, "(");
+
+        sj.add(String.valueOf(Integer.parseInt(consume(Token.Type.NUMBER).data)));
+        while (found(Token.Type.SEPARATOR, ",")) {
+            consume();
+            sj.add(String.valueOf(Integer.parseInt(consume(Token.Type.NUMBER).data)));
+        }
+
+        consume(Token.Type.SEPARATOR, ")");
+        return sj.toString();
+    }
+
+    private void output(Message message) {
+        try {
+            String str = (format == OutputFormat.PLAIN) ? message.toString() : message.toJSON();
+            out.write(str.getBytes(StandardCharsets.UTF_8));
+        } catch (IOException ignored) {
+        }
+    }
+
+    private class ParserException extends Exception {
+
+        private final Token token;
+
+        public ParserException(Token token, String message) {
+            super(message);
+            this.token = token;
+        }
+
+        public String getMessage() {
+            if (!filename.equals(""))
+                return filename + ":" + token.line + ":" + token.position + ": " + super.getMessage();
+            return super.getMessage();
+        }
+
     }
 
 }

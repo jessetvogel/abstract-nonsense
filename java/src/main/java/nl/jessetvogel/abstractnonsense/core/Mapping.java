@@ -116,19 +116,14 @@ public class Mapping {
 
                 Morphism g;
                 try {
-//                    System.out.println("Set g to be the image of " + context.str(f));
                     g = target.morphism(rep.map(this));
                 } catch (CreationException e) {
                     System.err.println(e.getMessage());
                     return false;
                 }
 
-                if (!set(f, g)) {
-//                    System.err.println("Failed to map " + context.str(f) + " to " + target.str(g));
+                if (!set(f, g))
                     return false;
-                }
-
-//                System.out.println("Put " + context.str(f) + " [" + f.index + ", " + f.k + "] |-> " + target.str(g) + " [" + g.index + ", " + g.k + "]");
 
                 it.remove();
                 updates = true;
