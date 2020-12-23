@@ -179,12 +179,9 @@ public class Diagram {
         if (representations.containsKey(rep))
             return representations.get(rep);
 
-        // Create Hom-morphism
-        int n = session.degree(f);
+        // Create Hom-object
         Morphism h = session.createObject(this, session.nCat(session.degree(f)));
         representations.put(rep, h);
-        if (n >= 0)
-            session.setHom(h.index, f, g); // TODO: this is a sort of workaround, don't know how to do it cleaner..
 
         // If g equals False, we are talking about a negation: automatically identify ~~P with P
         if (g.equals(session.False)) {
@@ -205,6 +202,8 @@ public class Diagram {
         // Trivial cases
         if (f.equals(g))
             return session.True;
+        if((f.equals(session.True) && g.equals(session.False)) || (f.equals(session.False) && g.equals(session.True)))
+            return session.False;
 
         // Lookup representation
         if (representations.containsKey(rep))
@@ -335,7 +334,7 @@ public class Diagram {
 
         // If there is still more than one morphism, this composition is not yet created.
         // So we create it now, and set the representation. Also, add a new rewrite rule.
-        Morphism g = session.createMorphism(owner(list), session.cat(list.get(0)), list.get(0).k, x, y);
+        Morphism g = session.createMorphism(owner(list), x, y);
         representations.put(rep, g);
         rewriter.addRule(new ArrayList<>(list), new ArrayList<>(Collections.singleton(g)));
         return g;
@@ -417,7 +416,7 @@ public class Diagram {
                 Morphism X = session.dom(f), Y = session.cod(f);
                 Morphism FX = createFunctorApplication(Representation.functorApplication(F, X));
                 Morphism FY = createFunctorApplication(Representation.functorApplication(F, Y));
-                g = session.createMorphism(this, session.cod(F), 1, FX, FY);
+                g = session.createMorphism(this, FX, FY);
             }
         }
 
@@ -503,7 +502,4 @@ public class Diagram {
         indices.remove(index);
     }
 
-    public Session getSession() {
-        return session;
-    }
 }

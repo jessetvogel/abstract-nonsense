@@ -20,8 +20,6 @@ public class Session extends Diagram {
     public final List<Integer> nCat;
     public final Morphism True, False, Prop, Set, Cat;
 
-    private final Map<Integer, MorphismPair> homs; // TODO: Can we not discard these?
-
     public Session() {
         super(null, null);
 
@@ -32,7 +30,6 @@ public class Session extends Diagram {
         owners = new HashMap<>();
         morphismInfo = new HashMap<>();
         identifications = new HashMap<>();
-        homs = new HashMap<>();
         contradiction = false;
 
         // Create default morphisms
@@ -50,7 +47,7 @@ public class Session extends Diagram {
             F = createObject(this, Prop);
         } catch (CreationException e) {
             // This can't happen..
-            e.printStackTrace();
+            assert false;
         }
         False = F;
 
@@ -130,42 +127,24 @@ public class Session extends Diagram {
         return new Morphism(f.index, f.k + 1);
     }
 
-    public void setHom(int index, Morphism X, Morphism Y) {
-        homs.put(index, new MorphismPair(X, Y));
-    }
-
     public Morphism createObject(Diagram diagram, Morphism category) throws CreationException {
-        // If given category is a hom-category, then create k-morphism for higher k
-        if (homs.containsKey(category.index)) {
-            MorphismPair pair = homs.get(category.index);
-            return createMorphism(diagram, session.cat(pair.f), pair.f.k + 1, pair.f, pair.g);
-        }
-
-        return createMorphism(diagram, category, 0, category, category);
+        // Allocate a new index for this morphism and set info
+        int index = indexCounter++;
+        morphismInfo.put(index, new MorphismInfo(category.index, 0, category.index, category.index));
+        owners.put(index, diagram);
+        diagram.addIndex(index);
+        return new Morphism(index, 0);
     }
 
-    public Morphism createMorphism(Diagram diagram, Morphism category, int k, Morphism domain, Morphism codomain) throws CreationException {
-        if (!isCategory(category))
-            throw new CreationException("is not a category");
+    public Morphism createMorphism(Diagram diagram, Morphism domain, Morphism codomain) throws CreationException {
+        // For a morphism from domain to codomain, the domain and codomain must be comparable
+        if(!comparable(domain, codomain))
+            throw new CreationException("domain and codomain are not comparable");
 
-        // k must be non-negative
-        if (k < 0)
-            throw new CreationException("k must be non-negative");
-
-        // If k > 0, k must be at most X.k() + 1 and Y.k() + 1
-        if (k > 0 && (domain.k != k - 1 || codomain.k != k - 1))
-            throw new CreationException("k-morphisms must be between (k-1)-morphisms");
-
-        // If k > 0, category must agree with the categories of domain and codomain
-        if (k > 0 && (!cat(domain).equals(category) || !cat(codomain).equals(category)))
-            throw new CreationException("domain or codomain does not lie in the specified category");
-
-        // If k > 1, the domain and codomain of the domain and codomain must agree
-        if (k > 1 && (!dom(domain).equals(dom(codomain)) || !cod(domain).equals(cod(codomain))))
-            throw new CreationException("domain and codomain or domain and codomain must agree");
-
-        // k must be at most the n-value of C
+        // k must be at most the n-value of the category
+        Morphism category = session.cat(domain);
         int n = session.degree(category);
+        int k = domain.k + 1;
         if (k > n)
             throw new CreationException("cannot create a " + k + "-morphism in a " + n + "-category");
 
@@ -298,7 +277,7 @@ public class Session extends Diagram {
                     case EQUALITY: {
                         if (gBool) {
                             Morphism u = rep.data.get(0), v = rep.data.get(1);
-                            if(!isCategory(u))
+                            if(cat(u).equals(Prop) || !isCategory(u))
                                 inducedIdentifications.add(new MorphismPair(u, v));
                         }
                         break;

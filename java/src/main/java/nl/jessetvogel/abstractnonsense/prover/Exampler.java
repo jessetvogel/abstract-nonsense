@@ -44,7 +44,7 @@ public class Exampler {
                         sj.add(m.target.str(f));
                     }
                 }
-                results.add("\uD83D\uDCD6 [" + name + "] " + sj.toString());
+                results.add("[" + name + "] " + sj.toString());
             }
         }
 

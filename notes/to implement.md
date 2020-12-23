@@ -1,5 +1,14 @@
 ### Priority
 
+- Get rid of the hom-sets!!!
+- ![image-20201220154840184](/Users/jessevogel/Library/Application Support/typora-user-images/image-20201220154840184.png)
+
+
+
+
+
+
+
 - How to deal with modules? Cannot do `Mod : Ring -> Cat` anymore since `Ring` is a 1-category and `Cat` a 2-category.
   - Maybe generalize `Property` to yield n-Categories instead of only (-1)-Categories (`Prop`'s)
     - `class Property { String name; Diagram diagram; int n; }` -- application creates an $n$-category

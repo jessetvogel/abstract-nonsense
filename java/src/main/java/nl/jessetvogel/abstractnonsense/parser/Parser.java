@@ -175,10 +175,11 @@ public class Parser {
                     throw new ParserException(tLet, "Symbol " + i + " is already used");
             }
             consume(Token.Type.SEPARATOR, ":");
-            Morphism type = parseMorphism(session);
+            MorphismPair type = parseMorphismType(session);
             for (String i : identifiers) {
                 try {
-                    session.assignSymbol(i, session.createObject(session, type));
+                    Morphism f = (type.g == null ? session.createObject(session, type.f) : session.createMorphism(session, type.f, type.g));
+                    session.assignSymbol(i, f);
                 } catch (CreationException e) {
                     e.printStackTrace();
                 }
@@ -213,10 +214,9 @@ public class Parser {
                 throw new ParserException(tProve, "Prove requires a Proposition");
             Prover prover = new Prover(session, session);
             if (prover.prove(P, 10)) {
-                StringJoiner sj = new StringJoiner("\n");
-                for(String line : prover.getProof())
-                    sj.add(line);
-                output(new Message(Message.Type.INFO, "\uD83C\uDF89 Proven!\n" + sj.toString()));
+                Message message = new Message(Message.Type.INFO, "\uD83C\uDF89 Proven!");
+                message.setProof(prover.getProof());
+                output(message);
             }
             else
                 output(new Message(Message.Type.INFO, "\uD83E\uDD7A Could not prove.."));
@@ -329,11 +329,16 @@ public class Parser {
             consume(Token.Type.SEPARATOR, "}");
 
             Exampler ex = new Exampler(session, context);
-            StringJoiner sj = new StringJoiner("\n");
-            sj.setEmptyValue("\uD83E\uDD7A No examples found");
-            for(String result : ex.search())
-                sj.add(result);
-            output(new Message(Message.Type.INFO, sj.toString()));
+
+            List<String> examples = ex.search();
+            if(!examples.isEmpty()) {
+                Message message = new Message(Message.Type.INFO, "\uD83D\uDCD6 Found " + examples.size() + " examples!");
+                message.setExamples(examples);
+                output(message);
+            }
+            else
+                output(new Message(Message.Type.INFO, "\uD83E\uDD7A No examples found"));
+
             context.detach();
             return;
         }
@@ -412,15 +417,14 @@ public class Parser {
                     throw new ParserException(t, "Symbol " + sym + " is already used");
             }
             consume(Token.Type.SEPARATOR, ":");
-            Morphism type = parseMorphism(diagram);
+            MorphismPair type = parseMorphismType(diagram);
             for (String sym : identifiers) {
-                Morphism f = null;
                 try {
-                    f = session.createObject(diagram, type);
+                    Morphism f = (type.g == null ? session.createObject(diagram, type.f) : session.createMorphism(diagram, type.f, type.g));
+                    diagram.assignSymbol(sym, f);
                 } catch (CreationException e) {
                     e.printStackTrace();
                 }
-                diagram.assignSymbol(sym, f);
             }
         }
     }
@@ -445,17 +449,17 @@ public class Parser {
                     throw new ParserException(t, "Symbol " + i + " is already used");
             }
             consume(Token.Type.SEPARATOR, ":");
-            Morphism type = parseMorphism(diagram);
+            MorphismPair type = parseMorphismType(diagram);
             for (String sym : identifiers) {
-                Morphism f = null;
                 try {
-                    f = session.createObject(diagram, type);
+                    Morphism f = (type.g == null ? session.createObject(diagram, type.f) : session.createMorphism(diagram, type.f, type.g));
+                    if (diagram instanceof Context)
+                        ((Context) diagram).data.add(f);
+                    diagram.assignSymbol(sym, f);
                 } catch (CreationException e) {
                     e.printStackTrace();
                 }
-                if (diagram instanceof Context)
-                    ((Context) diagram).data.add(f);
-                diagram.assignSymbol(sym, f);
+
             }
         }
     }
@@ -701,7 +705,7 @@ public class Parser {
                 continue;
             }
 
-            if (found(Token.Type.SEPARATOR, "->") && op.compare(MorphismOperator.HOM)) {
+            if (found(Token.Type.SEPARATOR, "->") && op.compare(MorphismOperator.HOM) && session.cat(f).equals(session.Prop)) {
                 Token t = consume();
                 Morphism g = parseMorphism(diagram, MorphismOperator.HOM);
                 try {
@@ -743,6 +747,19 @@ public class Parser {
         }
 
         return morphisms;
+    }
+
+    private MorphismPair parseMorphismType(Diagram diagram) throws ParserException, IOException, Lexer.LexerException {
+        Morphism f = parseMorphism(diagram);
+        Morphism g;
+        if(found(Token.Type.SEPARATOR, "->")) {
+            consume();
+            g = parseMorphism(diagram);
+        }
+        else {
+            g = null;
+        }
+        return new MorphismPair(f, g);
     }
 
     private String parseSignature() throws ParserException, IOException, Lexer.LexerException {

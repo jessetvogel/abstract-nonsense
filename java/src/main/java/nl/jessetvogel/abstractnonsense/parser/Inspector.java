@@ -1,6 +1,8 @@
 package nl.jessetvogel.abstractnonsense.parser;
 
 import nl.jessetvogel.abstractnonsense.core.*;
+
+import java.util.ArrayList;
 import java.util.StringJoiner;
 
 public class Inspector {
@@ -16,7 +18,7 @@ public class Inspector {
     }
 
     public String inspect(Diagram diagram, Morphism f) {
-        String type = (f.k == 0) ? diagram.str(diagram.getSession().cat(f)) : diagram.str(diagram.getSession().dom(f)) + " -> " + diagram.str(diagram.getSession().cod(f));
+        String type = (f.k == 0) ? diagram.str(session.cat(f)) : diagram.str(session.dom(f)) + " -> " + diagram.str(session.cod(f));
         return diagram.str(f) + " : " + type;
     }
 
@@ -68,9 +70,10 @@ public class Inspector {
 
     public String inspect(Diagram diagram) {
         StringBuilder sb = new StringBuilder();
-        for(int index : diagram.indices) {
+        for(int index : new ArrayList<>(diagram.indices)) {
             if (session.nCat.contains(index)) // Do not display categories of n-categories!
                 continue;
+
             sb.append("[").append(index).append("] ").append(inspect(session.morphismFromIndex(index))).append("\n");
         }
         return sb.toString();
