@@ -21,7 +21,7 @@ public class Main {
             // Read from System.in and write to System.out
             Parser parser = new Parser(System.in, System.out, session);
             if(json)
-                parser.setOutputFormat(Parser.OutputFormat.JSON);
+                parser.setOutputFormat(Formatter.OutputFormat.JSON);
             if (!parser.parse())
                 break;
         }

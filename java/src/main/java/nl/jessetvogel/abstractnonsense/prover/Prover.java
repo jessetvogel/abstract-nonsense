@@ -56,7 +56,7 @@ public class Prover extends Diagram {
     }
 
     private void considerGoal(Goal goal) {
-        System.out.println("\uD83D\uDCCC Consider the goal " + target.str(goal.P) + " ($" + goal.money + ")");
+//        System.out.println("\uD83D\uDCCC Consider the goal " + target.str(goal.P) + " ($" + goal.money + ")");
 
         // If there is no money left, we can't buy anything!
         if (goal.money == 0)

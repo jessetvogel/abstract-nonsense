@@ -11,6 +11,7 @@ class Lexer {
     private static final Pattern PATTERN_NUMBERS = Pattern.compile("^\\d+$");
     private static final Pattern PATTERN_IDENTIFIERS = Pattern.compile("^\\w+$");
     private static final Pattern PATTERN_STRING = Pattern.compile("^\"[^\"]*\"$");
+    private static final Pattern PATTERN_NEWLINE = Pattern.compile("^\\r?\\n$");
 
     private final Scanner scanner;
 
@@ -98,7 +99,7 @@ class Lexer {
             type = Token.Type.KEYWORD;
         else if (SEPARATORS.contains(str))
             type = Token.Type.SEPARATOR;
-        else if (str.equals("\n"))
+        else if (PATTERN_NEWLINE.matcher(str).matches())
             type = Token.Type.NEWLINE;
         else if (PATTERN_NUMBERS.matcher(str).matches())
             type = Token.Type.NUMBER;

@@ -18,6 +18,8 @@ public class Parser {
     private String filename, directory;
     private Token currentToken;
 
+    private final Formatter formatter;
+
     private enum MorphismOperator {
         NONE(0), EQUALITY(1), HOM(2), AND(3), OR(4), COMPOSITION(5), NEGATION(6), FUNCTOR(7);
 
@@ -32,10 +34,6 @@ public class Parser {
         }
     }
 
-    public enum OutputFormat { PLAIN, JSON }
-
-    private OutputFormat format = OutputFormat.PLAIN;
-
     public Parser(InputStream in, OutputStream out, Session session) {
         this.out = out;
         this.session = session;
@@ -44,6 +42,8 @@ public class Parser {
         directory = "";
         filename = "";
         currentToken = null;
+
+        formatter = new Formatter(session, Formatter.OutputFormat.PLAIN);
     }
 
     public void setLocation(String directory, String filename) {
@@ -51,8 +51,8 @@ public class Parser {
         this.filename = filename;
     }
 
-    public void setOutputFormat(OutputFormat format) {
-        this.format = format;
+    public void setOutputFormat(Formatter.OutputFormat format) {
+        formatter.format = format;
     }
 
     // ---- Token methods ----
@@ -98,17 +98,17 @@ public class Parser {
             while (!found(Token.Type.EOF)) {
                 parseStatement();
                 if (session.contradiction()) {
-                    output(new Message(Message.Type.INFO, "\u26A1 Contradiction!"));
+                    output(formatter.messageContradiction());
                     return false;
                 }
             }
             consume(Token.Type.EOF);
         } catch (ParserException e) {
-            output(new Message(Message.Type.ERROR, "\u26A0\uFE0F " + e.getMessage()));
+            output(formatter.messageError(e.getMessage()));
         } catch (Lexer.LexerException e) {
-            output(new Message(Message.Type.ERROR, "\u26A0\uFE0F " + (filename.equals("") ? "" : filename + ":") + e.getMessage()));
+            output(formatter.messageError((filename.equals("") ? "" : filename + ":") + e.getMessage()));
         } catch (IOException e) {
-            output(new Message(Message.Type.ERROR, "\u26A0\uFE0F IOException: " + e.getMessage()));
+            output(formatter.messageError("IOException: " + e.getMessage()));
         }
 
         return true;
@@ -155,15 +155,62 @@ public class Parser {
 
             Parser parser = new Parser(new FileInputStream(file), out, session);
             parser.setLocation(file.getAbsoluteFile().getParent() + File.separator, file.getName());
-            parser.setOutputFormat(format);
+            parser.setOutputFormat(formatter.format);
             parser.parse();
             return;
         }
 
         if (found(Token.Type.KEYWORD, "check")) {
-            consume();
+            Token tCheck = consume();
+
+            if (found(Token.Type.KEYWORD, "theorem")) {
+                consume();
+                String name = consume(Token.Type.IDENTIFIER).data;
+                Theorem theorem = session.getTheorem(name);
+                if (theorem == null)
+                    throw new ParserException(tCheck, "Theorem not found");
+                output(formatter.messageTheorem(theorem));
+                return;
+            }
+
+            if (found(Token.Type.KEYWORD, "property")) {
+                consume();
+                String name = consume(Token.Type.IDENTIFIER).data;
+                String signature = parseSignature();
+                Property property = session.getProperty(name, signature);
+                if (property == null)
+                    throw new ParserException(tCheck, "Property not found");
+                output(formatter.messageProperty(property));
+                return;
+            }
+
+            if (found(Token.Type.KEYWORD, "example")) {
+                consume();
+                String name = consume(Token.Type.IDENTIFIER).data;
+                Diagram example = session.getExample(name);
+                if (example == null)
+                    throw new ParserException(tCheck, "Example not found");
+                output(formatter.messageDiagram(example));
+                return;
+            }
+
+            if (found(Token.Type.IDENTIFIER, "session")) {
+                consume();
+                output(formatter.messageDiagram(session));
+                return;
+            }
+
+            if (found(Token.Type.NUMBER)) {
+                int index = Integer.parseInt(consume().data);
+                Morphism f = session.morphismFromIndex(index);
+                if (f == null)
+                    throw new ParserException(tCheck, "No morphism with index " + index);
+                output(formatter.messageMorphism(f));
+                return;
+            }
+
             Morphism f = parseMorphism(session);
-            output(new Message(Message.Type.INFO, (new Inspector(session)).inspect(f) + " (index " + f.index + ")"));
+            output(formatter.messageMorphism(f));
             return;
         }
 
@@ -213,13 +260,8 @@ public class Parser {
             if (!session.cat(P).equals(session.Prop))
                 throw new ParserException(tProve, "Prove requires a Proposition");
             Prover prover = new Prover(session, session);
-            if (prover.prove(P, 10)) {
-                Message message = new Message(Message.Type.INFO, "\uD83C\uDF89 Proven!");
-                message.setProof(prover.getProof());
-                output(message);
-            }
-            else
-                output(new Message(Message.Type.INFO, "\uD83E\uDD7A Could not prove.."));
+            boolean success = prover.prove(P, 10);
+            output(formatter.messageProven(success, prover.getProof()));
             prover.detach();
             return;
         }
@@ -239,9 +281,9 @@ public class Parser {
             if (mapping != null)
                 result = thm.apply(mapping);
             if (result == null)
-                output(new Message(Message.Type.INFO, "\u2757 Theorem does not apply to given data"));
+                output(formatter.messageError("Theorem does not apply to given data"));
             else if (!result.isEmpty())
-                output(new Message(Message.Type.INFO, "\uD83D\uDCA1 The following conditions must be satisfied: " + session.strList(result)));
+                output(formatter.messageError("The following conditions must be satisfied: " + session.strList(result)));
             return;
         }
 
@@ -329,16 +371,7 @@ public class Parser {
             consume(Token.Type.SEPARATOR, "}");
 
             Exampler ex = new Exampler(session, context);
-
-            List<String> examples = ex.search();
-            if(!examples.isEmpty()) {
-                Message message = new Message(Message.Type.INFO, "\uD83D\uDCD6 Found " + examples.size() + " examples!");
-                message.setExamples(examples);
-                output(message);
-            }
-            else
-                output(new Message(Message.Type.INFO, "\uD83E\uDD7A No examples found"));
-
+            output(formatter.messageExamples(ex.search()));
             context.detach();
             return;
         }
@@ -348,51 +381,7 @@ public class Parser {
         if (found(Token.Type.KEYWORD, "inspect")) {
             Token tInspect = consume();
 
-            if (found(Token.Type.KEYWORD, "theorem")) {
-                consume();
-                String name = consume(Token.Type.IDENTIFIER).data;
-                Theorem theorem = session.getTheorem(name);
-                if (theorem == null)
-                    throw new ParserException(tInspect, "Theorem not found");
-                output(new Message(Message.Type.INFO, (new Inspector(session)).inspect(theorem)));
-                return;
-            }
 
-            if (found(Token.Type.KEYWORD, "property")) {
-                consume();
-                String name = consume(Token.Type.IDENTIFIER).data;
-                String signature = parseSignature();
-                Property property = session.getProperty(name, signature);
-                if (property == null)
-                    throw new ParserException(tInspect, "Property not found");
-                output(new Message(Message.Type.INFO, (new Inspector(session)).inspect(property)));
-                return;
-            }
-
-            if (found(Token.Type.KEYWORD, "example")) {
-                consume();
-                String name = consume(Token.Type.IDENTIFIER).data;
-                Diagram example = session.getExample(name);
-                if (example == null)
-                    throw new ParserException(tInspect, "Example not found");
-                output(new Message(Message.Type.INFO, (new Inspector(session)).inspect(example)));
-                return;
-            }
-
-            if (found(Token.Type.IDENTIFIER, "session")) {
-                consume();
-                output(new Message(Message.Type.INFO, (new Inspector(session)).inspect(session)));
-                return;
-            }
-
-            if (found(Token.Type.NUMBER)) {
-                int index = Integer.parseInt(consume().data);
-                Morphism f = session.morphismFromIndex(index);
-                if (f == null)
-                    throw new ParserException(tInspect, "No morphism with index " + index);
-                output(new Message(Message.Type.INFO, (new Inspector(session)).inspect(f)));
-                return;
-            }
 
             throw new ParserException(tInspect, "Unexpected token");
         }
@@ -776,10 +765,10 @@ public class Parser {
         return sj.toString();
     }
 
-    private void output(Message message) {
+    private void output(String message) {
         try {
-            String str = (format == OutputFormat.PLAIN) ? message.toString() : message.toJSON();
-            out.write(str.getBytes(StandardCharsets.UTF_8));
+            out.write(message.getBytes(StandardCharsets.UTF_8));
+            out.write('\n');
         } catch (IOException ignored) {
         }
     }
