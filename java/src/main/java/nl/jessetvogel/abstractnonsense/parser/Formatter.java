@@ -59,18 +59,29 @@ public class Formatter {
         return null;
     }
 
-    public String messageExamples(List<String> examples) {
+    public String messageExamples(List<Mapping> examples) {
         if(format == OutputFormat.PLAIN) {
             if(examples.isEmpty())
                 return "\uD83E\uDD7A No examples found";
 
-            return String.format("\uD83D\uDCD6 Found %d examples!\n%s", examples.size(), String.join("\n", examples));
+            StringBuilder sb = new StringBuilder();
+            for(Mapping m : examples) {
+                StringJoiner sjExample = new StringJoiner(", ", "{ ", " }");
+                for(Morphism f : m.context.data)
+                    sjExample.add(session.str(f) + ": " + session.str(m.map(f)));
+                sb.append(sjExample.toString()).append('\n');
+            }
+            return String.format("\uD83D\uDCD6 Found %d examples!\n%s", examples.size(), sb.toString());
         }
 
         if (format == OutputFormat.JSON) {
             StringJoiner sjExamples = new StringJoiner(",", "[", "]");
-            for(String ex : examples)
-                sjExamples.add("\"" + escape(ex) + "\"");
+            for(Mapping m : examples) {
+                StringJoiner sjExample = new StringJoiner(",", "{", "}");
+                for(Morphism f : m.context.data)
+                    sjExample.add("\"" + escape(session.str(f)) + "\":\"" + escape(session.str(m.map(f))) + "\"");
+                sjExamples.add(sjExample.toString());
+            }
             return String.format("{\"type\":\"examples\",\"examples\":%s}", sjExamples.toString());
         }
 
@@ -115,7 +126,7 @@ public class Formatter {
                     property.name,
                     formatDiagram(property.context),
                     formatMorphismList(property.context.data),
-                    property.definition == null ? "None" : property.context.str(property.definition));
+                    property.definition == null ? "None" : session.str(property.definition));
         }
 
         if(format == OutputFormat.JSON) {
@@ -123,7 +134,7 @@ public class Formatter {
                     property.name,
                     formatDiagram(property.context),
                     formatMorphismList(property.context.data),
-                    property.definition == null ? "null" : ("\"" + escape(property.context.str(property.definition)) + "\""));
+                    property.definition == null ? "null" : ("\"" + escape(session.str(property.definition)) + "\""));
         }
 
         return null;
@@ -142,11 +153,10 @@ public class Formatter {
     // -------- Private formatting methods --------
 
     private String formatMorphism(Morphism f) {
-        Diagram diagram = session.owner(f);
-        String strF = diagram.str(f);
-        String strCat = diagram.str(session.cat(f));
-        String strDom = f.k != 0 ? diagram.str(session.dom(f)) : null;
-        String strCod = f.k != 0 ? diagram.str(session.cod(f)) : null;
+        String strF = session.str(f);
+        String strCat = session.str(session.cat(f));
+        String strDom = f.k != 0 ? session.str(session.dom(f)) : null;
+        String strCod = f.k != 0 ? session.str(session.cod(f)) : null;
 
         if(format == OutputFormat.PLAIN)
             return "[" + f.index + "] " + strF + " : " + ((f.k == 0) ? strCat : strDom + " -> " + strCod);
@@ -164,7 +174,7 @@ public class Formatter {
     private String formatMorphismList(List<Morphism> list) {
         StringJoiner sj = (format == OutputFormat.JSON) ? new StringJoiner(",", "[", "]") : new StringJoiner(", ");
         for(Morphism f : list) {
-            String strF = session.owner(f).str(f);
+            String strF = session.str(f);
             if(format == OutputFormat.JSON)
                 sj.add("\"" + escape(strF) + "\"");
             else

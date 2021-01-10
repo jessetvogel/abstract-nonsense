@@ -4,13 +4,11 @@ import java.util.*;
 
 public class Theorem extends Context {
 
-    public final String name;
     private final List<Morphism> conditions;
     private final List<Morphism> conclusions;
 
     public Theorem(Session session, String name) {
-        super(session, session);
-        this.name = name;
+        super(session, session, name);
         conclusions = new ArrayList<>();
         conditions = new ArrayList<>();
     }

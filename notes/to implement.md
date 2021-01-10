@@ -1,11 +1,10 @@
 ### Priority
 
-- Get rid of the hom-sets!!!
-- ![image-20201220154840184](/Users/jessevogel/Library/Application Support/typora-user-images/image-20201220154840184.png)
+- Move `Diagram::str` to `Session:str` (which looks at the owner)
+- Implement some command that lists theorems, examples, and properties
 
-
-
-
+- A way to reference morphisms in an example:
+  - `example::f`
 
 
 

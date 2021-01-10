@@ -14,41 +14,38 @@ public class Exampler {
         this.context = context;
     }
 
-    public List<String> search() {
-        List<String> results = new ArrayList<>();
+    public List<Mapping> search() {
+        List<Mapping> mappings = new ArrayList<>();
 
-        List<Map.Entry<String, Diagram>> diagrams = new ArrayList<>(session.getExamples());
-        diagrams.add(new AbstractMap.SimpleEntry<>("session", session));
-        for (Map.Entry<String, Diagram> example : diagrams) {
-            String name = example.getKey();
-            Diagram diagram = example.getValue();
-
+        Set<Diagram> diagrams = new HashSet<>(session.getExamples());
+        diagrams.add(session);
+        for (Diagram diagram : diagrams) {
             // Search
-            List<Mapping> mappings = new ArrayList<>();
             Searcher searcher = new Searcher(context, diagram);
             searcher.search(mappings);
-
-            // Print results
-            for (Mapping m : mappings) {
-                // If this is an disingenuous mapping (i.e. the data is not really mapped to the target), then skip this mapping
-                if(!m.target.ownsAny(m.map(context.data)))
-                    continue;
-
-                StringJoiner sj = new StringJoiner(", ");
-                sj.setEmptyValue("{}");
-                for (Morphism f : context.data) {
-                    if (context.owns(f)) { // It might happen that some data is forced to be some value (such as True or False)
-                        Morphism g = m.map(f);
-                        sj.add(context.str(f) + ": " + m.target.str(g));
-                    } else {
-                        sj.add(m.target.str(f));
-                    }
-                }
-                results.add("[" + name + "] " + sj.toString());
-            }
         }
 
-        return results;
+        return mappings;
+
+//            // Print results
+//            for (Mapping m : mappings) {
+//                // If this is an disingenuous mapping (i.e. the data is not really mapped to the target), then skip this mapping
+//                if(!m.target.ownsAny(m.map(context.data)))
+//                    continue;
+//
+//                StringJoiner sj = new StringJoiner(", ");
+//                sj.setEmptyValue("{}");
+//                for (Morphism f : context.data) {
+//                    if (context.owns(f)) { // It might happen that some data is forced to be some value (such as True or False)
+//                        Morphism g = m.map(f);
+//                        sj.add(session.str(f) + ": " + session.str(g));
+//                    } else {
+//                        sj.add(session.str(f));
+//                    }
+//                }
+//                results.add("[" + name + "] " + sj.toString());
+//            }
+//        return results;
     }
 
 }

@@ -291,7 +291,7 @@ public class Parser {
             Token tProperty = consume();
             List<String> identifiers = parseListOfIdentifiers();
 
-            Context context = new Context(session, session);
+            Context context = new Context(session, session, String.join(",", identifiers));
             consume(Token.Type.SEPARATOR, "{");
             parseImplicits(context);
             parseGivens(context);
@@ -348,7 +348,7 @@ public class Parser {
             if (session.hasExample(name))
                 throw new ParserException(tExample, "Example name " + name + " is already used");
 
-            Diagram example = new Diagram(session, session);
+            Diagram example = new Diagram(session, session, name);
             consume(Token.Type.SEPARATOR, "{");
             parseImplicits(example);
             parseGivens(example);
@@ -362,7 +362,7 @@ public class Parser {
 
         if (found(Token.Type.KEYWORD, "search")) {
             consume();
-            Context context = new Context(session, session);
+            Context context = new Context(session, session, "");
             consume(Token.Type.SEPARATOR, "{");
             parseImplicits(context);
             parseGivens(context);

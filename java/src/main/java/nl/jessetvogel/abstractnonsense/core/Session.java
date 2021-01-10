@@ -21,7 +21,7 @@ public class Session extends Diagram {
     public final Morphism True, False, Prop, Set, Cat;
 
     public Session() {
-        super(null, null);
+        super(null, null, "session");
 
         // Create maps
         properties = new HashMap<>();
@@ -190,7 +190,7 @@ public class Session extends Diagram {
         examples.put(name, example);
     }
 
-    public Set<Map.Entry<String, Diagram>> getExamples() { return examples.entrySet(); }
+    public Collection<Diagram> getExamples() { return examples.values(); }
 
     public Diagram getExample(String name) {
         return examples.get(name);
@@ -341,6 +341,68 @@ public class Session extends Diagram {
         Morphism f = new Morphism(index, k);
         f.info = info;
         return f;
+    }
+
+    // -------- Stringify --------
+
+    public String strList(List<Morphism> list) {
+        if (list.isEmpty())
+            return "";
+        StringJoiner sj = new StringJoiner(", ");
+        for (Morphism x : list)
+            sj.add(str(x));
+        return sj.toString();
+    }
+
+    public String str(Representation rep) {
+        switch (rep.type) {
+            case HOM:
+                return rep.data.get(1).equals(session.False) ? "~" + wrap(str(rep.data.get(0))) : (wrap(str(rep.data.get(0))) + " -> " + wrap(str(rep.data.get(1))));
+            case EQUALITY:
+                return wrap(str(rep.data.get(0))) + " = " + wrap(str(rep.data.get(1)));
+            case AND:
+                return wrap(str(rep.data.get(0))) + " & " + wrap(str(rep.data.get(1)));
+            case OR:
+                return wrap(str(rep.data.get(0))) + " | " + wrap(str(rep.data.get(1)));
+            case COMPOSITION: {
+                StringJoiner sj = new StringJoiner(".");
+                for (Morphism f : rep.data)
+                    sj.add(wrap(str(f)));
+                return sj.toString();
+            }
+            case FUNCTOR_APPLICATION:
+                return wrap(str(rep.data.get(0))) + "(" + str(rep.data.get(1)) + ")";
+            case PROPERTY_APPLICATION:
+                return rep.property.name + "(" + strList(rep.data) + ")";
+            default:
+                return null;
+        }
+    }
+
+    public String str(Morphism f) {
+        // For identity morphisms
+        if (session.isIdentity(f))
+            return "id(" + str(new Morphism(f.index, f.k - 1)) + ")";
+
+        // Preferably use symbols
+        Diagram owner = owner(f);
+        for (Map.Entry<String, Morphism> entry : owner.symbols.entrySet())
+            if (entry.getValue().equals(f))
+                return (owner == session || owner.name.equals("") ? "" : owner.name + "::") + entry.getKey();
+
+        // Use the first-defined representation
+        for (Map.Entry<Representation, Morphism> entry : owner.representations.entrySet())
+            if (entry.getValue().equals(f))
+                return str(entry.getKey());
+
+        return "[" + f.index + "]";
+    }
+
+    private String wrap(String s) {
+        if (s.matches("^\\w*(\\(.*\\))?$"))
+            return s;
+        else
+            return "(" + s + ")";
     }
 
     public String signature(List<Morphism> list) {

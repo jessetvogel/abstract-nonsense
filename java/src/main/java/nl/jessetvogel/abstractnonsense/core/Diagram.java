@@ -7,15 +7,17 @@ public class Diagram {
     protected final Session session;
     private final Diagram parent;
     private final List<Diagram> children;
+    public final String name;
 
     public final List<Integer> indices;
     public final Map<Representation, Morphism> representations;
-    private final Map<String, Morphism> symbols;
+    final Map<String, Morphism> symbols;
     private final Rewriter rewriter;
 
-    public Diagram(Session session, Diagram parent) {
+    public Diagram(Session session, Diagram parent, String name) {
         this.session = (session != null ? session : (Session) this);
         this.parent = parent;
+        this.name = name;
 
         indices = new ArrayList<>();
         symbols = new LinkedHashMap<>();
@@ -425,73 +427,6 @@ public class Diagram {
 
         representations.put(rep, g);
         return g;
-    }
-
-    // ------------ Stringify ------------
-
-    public String strList(List<Morphism> list) {
-        if (list.isEmpty())
-            return "";
-        StringJoiner sj = new StringJoiner(", ");
-        for (Morphism x : list)
-            sj.add(str(x));
-        return sj.toString();
-    }
-
-    public String str(Representation rep) {
-        switch (rep.type) {
-            case HOM:
-                return rep.data.get(1).equals(session.False) ? "~" + wrap(str(rep.data.get(0))) : (wrap(str(rep.data.get(0))) + " -> " + wrap(str(rep.data.get(1))));
-            case EQUALITY:
-                return wrap(str(rep.data.get(0))) + " = " + wrap(str(rep.data.get(1)));
-            case AND:
-                return wrap(str(rep.data.get(0))) + " & " + wrap(str(rep.data.get(1)));
-            case OR:
-                return wrap(str(rep.data.get(0))) + " | " + wrap(str(rep.data.get(1)));
-            case COMPOSITION: {
-                StringJoiner sj = new StringJoiner(".");
-                for (Morphism f : rep.data)
-                    sj.add(wrap(str(f)));
-                return sj.toString();
-            }
-            case FUNCTOR_APPLICATION:
-                return wrap(str(rep.data.get(0))) + "(" + str(rep.data.get(1)) + ")";
-            case PROPERTY_APPLICATION:
-                return rep.property.name + "(" + strList(rep.data) + ")";
-            default:
-                return null;
-        }
-    }
-
-    public String str(Morphism f) {
-        if(hasParent() && !owns(f))
-            return parent.str(f);
-
-        // For identity morphisms
-        if (session.isIdentity(f))
-            return "id(" + str(new Morphism(f.index, f.k - 1)) + ")";
-
-        // Preferably use symbols
-        for (Map.Entry<String, Morphism> entry : symbols.entrySet())
-            if (entry.getValue().equals(f))
-                return entry.getKey();
-
-        // Use the first-defined representation
-        for (Map.Entry<Representation, Morphism> entry : representations.entrySet())
-            if (entry.getValue().equals(f))
-                return str(entry.getKey());
-
-        if (hasParent() && !owns(f))
-            return parent.str(f);
-
-        return "[" + f.index + "]";
-    }
-
-    private String wrap(String s) {
-        if (s.matches("^\\w*(\\(.*\\))?$"))
-            return s;
-        else
-            return "(" + s + ")";
     }
 
     protected void addIndex(int index) {

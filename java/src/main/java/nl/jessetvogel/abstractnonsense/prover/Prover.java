@@ -15,7 +15,7 @@ public class Prover extends Diagram {
     private final List<Implication> implications;
 
     public Prover(Session session, Diagram target) {
-        super(session, target);
+        super(session, target, "prover");
         this.target = target;
 
         proof = new ArrayList<>();
@@ -70,7 +70,7 @@ public class Prover extends Diagram {
                         goal,
                         new ArrayList<>(Collections.singletonList(Q)),
                         goal.money - 1,
-                        target.str(Q) + " implies " + target.str(goal.P)
+                        session.str(Q) + " implies " + session.str(goal.P)
                 );
             }
         }
@@ -142,7 +142,7 @@ public class Prover extends Diagram {
 
     private void considerTheorem(Goal goal, Theorem thm, Mapping mapping) {
         // Construct message before applying theorem, as otherwise str(P) might evaluate to True otherwise
-        String message = "By Theorem " + thm.name + " applied to (" + target.strList(mapping.map(thm.data)) + "), we have " + target.str(goal.P);
+        String message = "By Theorem " + thm.name + " applied to (" + session.strList(mapping.map(thm.data)) + "), we have " + session.str(goal.P);
 
         // See if we can apply the theorem using mapping
         int i = proof.size();

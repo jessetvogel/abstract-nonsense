@@ -6,8 +6,8 @@ public class Context extends Diagram {
 
     public final List<Morphism> data;
 
-    public Context(Session session, Diagram parent) {
-        super(session, parent);
+    public Context(Session session, Diagram parent, String name) {
+        super(session, parent, name);
         data = new ArrayList<>();
     }
 
