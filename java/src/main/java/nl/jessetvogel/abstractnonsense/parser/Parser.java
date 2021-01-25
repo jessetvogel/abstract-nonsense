@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.StringJoiner;
+import java.util.stream.Collectors;
 
 public class Parser {
     private final OutputStream out;
@@ -93,10 +94,10 @@ public class Parser {
 
     // ---- Parsing methods ----
 
-    public boolean parse() {
+    public boolean parse(Diagram diagram) {
         try {
             while (!found(Token.Type.EOF)) {
-                parseStatement();
+                parseStatement(diagram);
                 if (session.contradiction()) {
                     output(formatter.messageContradiction());
                     return false;
@@ -114,13 +115,14 @@ public class Parser {
         return true;
     }
 
-    private void parseStatement() throws ParserException, IOException, Lexer.LexerException {
+    private void parseStatement(Diagram diagram) throws ParserException, IOException, Lexer.LexerException {
         /* STATEMENT =
                 ; |
                 exit |
                 import STRING |
-                check MORPHISM |
+                check (theorem (* | IDENTIFIER) | example (* | IDENTIFIER) | NUMBER | MORPHISM) |
                 let LIST_OF_IDENTIFIERS : TYPE |
+                write IDENTIFIER := MORPHISM |
                 assume LIST_OF_MORPHISMS |
                 prove MORPHISM |
                 apply IDENTIFIER ( LIST_OF_MORPHISMS ) |
@@ -156,7 +158,7 @@ public class Parser {
             Parser parser = new Parser(new FileInputStream(file), out, session);
             parser.setLocation(file.getAbsoluteFile().getParent() + File.separator, file.getName());
             parser.setOutputFormat(formatter.format);
-            parser.parse();
+            parser.parse(diagram);
             return;
         }
 
@@ -165,6 +167,13 @@ public class Parser {
 
             if (found(Token.Type.KEYWORD, "theorem")) {
                 consume();
+
+                if(found(Token.Type.SEPARATOR, "*")) {
+                    consume();
+                    output(formatter.messageList(session.getTheorems().stream().map(thm -> thm.name).collect(Collectors.toList())));
+                    return;
+                }
+
                 String name = consume(Token.Type.IDENTIFIER).data;
                 Theorem theorem = session.getTheorem(name);
                 if (theorem == null)
@@ -175,6 +184,13 @@ public class Parser {
 
             if (found(Token.Type.KEYWORD, "property")) {
                 consume();
+
+                if(found(Token.Type.SEPARATOR, "*")) {
+                    consume();
+                    output(formatter.messageList(session.getProperties().stream().map(property -> property.name + property.context.signature()).collect(Collectors.toList())));
+                    return;
+                }
+
                 String name = consume(Token.Type.IDENTIFIER).data;
                 String signature = parseSignature();
                 Property property = session.getProperty(name, signature);
@@ -186,6 +202,13 @@ public class Parser {
 
             if (found(Token.Type.KEYWORD, "example")) {
                 consume();
+
+                if(found(Token.Type.SEPARATOR, "*")) {
+                    consume();
+                    output(formatter.messageList(session.getExamples().stream().map(example -> example.name).collect(Collectors.toList())));
+                    return;
+                }
+
                 String name = consume(Token.Type.IDENTIFIER).data;
                 Diagram example = session.getExample(name);
                 if (example == null)
@@ -209,7 +232,7 @@ public class Parser {
                 return;
             }
 
-            Morphism f = parseMorphism(session);
+            Morphism f = parseMorphism(diagram);
             output(formatter.messageMorphism(f));
             return;
         }
@@ -218,15 +241,15 @@ public class Parser {
             Token tLet = consume();
             List<String> identifiers = parseListOfIdentifiers();
             for (String i : identifiers) {
-                if (session.hasSymbol(i))
+                if (diagram.hasSymbol(i))
                     throw new ParserException(tLet, "Symbol " + i + " is already used");
             }
             consume(Token.Type.SEPARATOR, ":");
-            MorphismPair type = parseMorphismType(session);
+            MorphismPair type = parseMorphismType(diagram);
             for (String i : identifiers) {
                 try {
-                    Morphism f = (type.g == null ? session.createObject(session, type.f) : session.createMorphism(session, type.f, type.g));
-                    session.assignSymbol(i, f);
+                    Morphism f = (type.g == null ? session.createObject(diagram, type.f) : session.createMorphism(diagram, type.f, type.g));
+                    diagram.assignSymbol(i, f);
                 } catch (CreationException e) {
                     e.printStackTrace();
                 }
@@ -236,13 +259,13 @@ public class Parser {
 
         if (found(Token.Type.KEYWORD, "assume")) {
             Token tAssume = consume();
-            List<Morphism> assumptions = parseListOfMorphisms(session);
-            for (Morphism P : assumptions) {
+            List<Morphism> assumptions = parseListOfMorphisms(diagram);
+            for (Morphism P : assumptions) { // TODO: is this safe?
                 if (!session.cat(P).equals(session.Prop))
                     throw new ParserException(tAssume, "Assume requires a proposition");
             }
 
-            for (Morphism P : assumptions) {
+            for (Morphism P : assumptions) { // TODO: is this safe?
                 try {
                     session.identify(P, session.True);
                 } catch (CreationException e) {
@@ -256,10 +279,10 @@ public class Parser {
         if (found(Token.Type.KEYWORD, "prove")) {
             consume();
             Token tProve = currentToken;
-            Morphism P = parseMorphism(session);
+            Morphism P = parseMorphism(diagram);
             if (!session.cat(P).equals(session.Prop))
                 throw new ParserException(tProve, "Prove requires a Proposition");
-            Prover prover = new Prover(session, session);
+            Prover prover = new Prover(session, diagram);
             boolean success = prover.prove(P, 10);
             output(formatter.messageProven(success, prover.getProof()));
             prover.detach();
@@ -274,7 +297,7 @@ public class Parser {
             if (thm == null)
                 throw new ParserException(tIdentifier, "Unknown theorem '" + name + "'");
             consume(Token.Type.SEPARATOR, "(");
-            Mapping mapping = thm.createMappingFromData(session, parseListOfMorphisms(session));
+            Mapping mapping = thm.createMappingFromData(diagram, parseListOfMorphisms(diagram));
             consume(Token.Type.SEPARATOR, ")");
 
             List<Morphism> result = null;
@@ -289,6 +312,10 @@ public class Parser {
 
         if (found(Token.Type.KEYWORD, "property")) {
             Token tProperty = consume();
+
+            if(diagram != session)
+                throw new ParserException(tProperty, "Properties cannot be defined within example");
+
             List<String> identifiers = parseListOfIdentifiers();
 
             Context context = new Context(session, session, String.join(",", identifiers));
@@ -296,6 +323,7 @@ public class Parser {
             parseImplicits(context);
             parseGivens(context);
             parseWrites(context);
+            parseAssumptions(context);
 
             Morphism definition = null;
             if (found(Token.Type.KEYWORD, "def")) {
@@ -320,9 +348,12 @@ public class Parser {
         }
 
         if (found(Token.Type.KEYWORD, "theorem")) {
-            consume();
-            Token tIdentifier = consume(Token.Type.IDENTIFIER);
+            Token tTheorem = consume();
 
+            if(diagram != session)
+                throw new ParserException(tTheorem, "Theorems cannot be defined within example");
+
+            Token tIdentifier = consume(Token.Type.IDENTIFIER);
             String name = tIdentifier.data;
 
             if (session.hasTheorem(name))
@@ -343,25 +374,31 @@ public class Parser {
 
         if (found(Token.Type.KEYWORD, "example")) {
             Token tExample = consume();
+
+            if(diagram != session)
+                throw new ParserException(tExample, "Examples cannot be defined within example");
+
             String name = consume(Token.Type.IDENTIFIER).data;
 
-            if (session.hasExample(name))
-                throw new ParserException(tExample, "Example name " + name + " is already used");
+            Diagram example = session.getExample(name);
+            if (example == null) {
+                example = new Diagram(session, session, name);
+                session.addExample(name, example);
+            }
 
-            Diagram example = new Diagram(session, session, name);
             consume(Token.Type.SEPARATOR, "{");
-            parseImplicits(example);
-            parseGivens(example);
-            parseWrites(example);
-            parseAssumptions(example);
+            while(!found(Token.Type.SEPARATOR, "}"))
+                parseStatement(example);
             consume(Token.Type.SEPARATOR, "}");
-
-            session.addExample(name, example);
             return;
         }
 
         if (found(Token.Type.KEYWORD, "search")) {
-            consume();
+            Token tSearch = consume();
+
+            if(diagram != session)
+                throw new ParserException(tSearch, "Cannot search from within example");
+
             Context context = new Context(session, session, "");
             consume(Token.Type.SEPARATOR, "{");
             parseImplicits(context);
@@ -376,14 +413,15 @@ public class Parser {
             return;
         }
 
-        // -- FOR DEBUGGING --
-
-        if (found(Token.Type.KEYWORD, "inspect")) {
-            Token tInspect = consume();
-
-
-
-            throw new ParserException(tInspect, "Unexpected token");
+        if(found(Token.Type.KEYWORD, "write")) {
+            Token tWrite = consume();
+            String name = consume(Token.Type.IDENTIFIER).data;
+            if(diagram.hasSymbol(name))
+                throw new ParserException(tWrite, "Symbol " + name + " is already used");
+            consume(Token.Type.SEPARATOR, ":=");
+            Morphism f = parseMorphism(diagram);
+            diagram.assignSymbol(name, f);
+            return;
         }
 
         throw new ParserException(currentToken, "Unable to parse statement '" + currentToken.data + "'");
@@ -455,7 +493,7 @@ public class Parser {
 
     private void parseWrites(Diagram diagram) throws ParserException, IOException, Lexer.LexerException {
         /*  WRITES =
-                write IDENTIFIER = MORPHISM ( , IDENTIFIER = MORPHISM )*
+                write IDENTIFIER := MORPHISM ( , IDENTIFIER = MORPHISM )*
          */
 
         boolean first = true;
@@ -640,7 +678,7 @@ public class Parser {
         }
 
         if (f == null)
-            throw new ParserException(currentToken, "Expected an object or morphism");
+            throw new ParserException(currentToken, "Expected a morphism");
 
         // Now we have some f, see if we can (possibly) extend it!
         // This seems to be the solution to left-recursive patterns
@@ -659,7 +697,7 @@ public class Parser {
             }
 
             if (found(Token.Type.SEPARATOR, ".") && op.compare(MorphismOperator.COMPOSITION)) {
-                consume();
+                Token t = consume();
                 Morphism g = parseMorphism(diagram, MorphismOperator.COMPOSITION);
                 List<Morphism> fList = new ArrayList<>();
                 fList.add(f);
@@ -667,7 +705,7 @@ public class Parser {
                 try {
                     f = diagram.morphism(Representation.composition(fList));
                 } catch (CreationException e) {
-                    e.printStackTrace();
+                    throw new ParserException(t, e.getMessage());
                 }
                 continue;
             }

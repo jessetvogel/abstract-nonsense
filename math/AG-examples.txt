@@ -1,7 +1,7 @@
 example ZZ {
     let ZZ : Ring
     write X := Spec(ZZ)
-    with
+    assume
         irreducible(X),
         locally_noetherian(X),
         excellent(X),
@@ -16,7 +16,7 @@ example ZZ {
 example QQ {
     let QQ : Ring
     write X := Spec(QQ)
-    with
+    assume
         qcompact(X),
         cohen_macaulay(X),
         integral(X),
@@ -37,7 +37,8 @@ example affine_line_over_QQ {
 
 example infinite_union_of_Spec_QQ {
     let X : Scheme
-    with    ~irreducible(X),
+    assume 
+            ~irreducible(X),
             ~connected(top(X)),
             normal(X),
             separated(X),
@@ -54,7 +55,7 @@ example infinite_union_of_Spec_QQ {
 
 example infinitely_blown_up_plane {
     let X : Scheme
-    with 
+    assume 
         ~noetherian(X),
         ~affine(X),
         integral(X),
@@ -71,7 +72,7 @@ example infinitely_blown_up_plane {
  
 example affine_line_with_infinitely_many_origins {
     let X : Scheme
-    with
+    assume
         ~separated(X),
         ~noetherian(X),
         integral(X),
@@ -86,7 +87,7 @@ example affine_line_with_infinitely_many_origins {
 
 example projective_line_over_QQ {
     let X : Scheme
-    with
+    assume
         irreducible(X),
         noetherian(X),
         regular(X),

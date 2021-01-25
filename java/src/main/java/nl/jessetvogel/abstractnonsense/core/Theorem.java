@@ -42,7 +42,7 @@ public class Theorem extends Context {
     }
 
     private void applyConclusion(Mapping mapping) {
-        for (Morphism Q : conclusions) {
+        for (Morphism Q : new ArrayList<>(conclusions)) {
             try {
                 session.identify(mapping.map(Q), session.True);
             } catch (Exception e) {

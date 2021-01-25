@@ -3,6 +3,7 @@ package nl.jessetvogel.abstractnonsense.parser;
 import nl.jessetvogel.abstractnonsense.core.*;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.StringJoiner;
 
@@ -145,7 +146,25 @@ public class Formatter {
             return formatDiagram(diagram);
 
         if(format == OutputFormat.JSON)
-            return String.format("{\"type\":\"diagram\",\"diagram\":%s}", formatDiagram(diagram));
+            return String.format("{\"type\":\"diagram\",\"morphisms\":%s}", formatDiagram(diagram));
+
+        return null;
+    }
+
+    public String messageList(Collection<String> items) {
+        if(format == OutputFormat.PLAIN) {
+            StringJoiner sj = new StringJoiner(", ");
+            for(String s : items)
+                sj.add(s);
+            return sj.toString();
+        }
+
+        if(format == OutputFormat.JSON) {
+            StringJoiner sj = new StringJoiner(",", "[", "]");
+            for(String s : items)
+                sj.add("\"" + escape(s) + "\"");
+            return String.format("{\"type\":\"list\",\"items\":%s}", sj.toString());
+        }
 
         return null;
     }

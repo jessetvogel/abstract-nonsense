@@ -1,10 +1,25 @@
 ### Priority
 
-- Move `Diagram::str` to `Session:str` (which looks at the owner)
+- ~~Move `Diagram::str` to `Session:str` (which looks at the owner)~~
+
+- ~~Make `write` a statement~~
+
 - Implement some command that lists theorems, examples, and properties
 
-- A way to reference morphisms in an example:
-  - `example::f`
+- ~~A way to reference morphisms in an example:~~
+  
+  - ~~`example::f`~~ This will mess up morphism ownership!
+  
+  - ```
+    example ZZ {
+    	// Commands executed from within ZZ
+    }
+    ```
+  
+    which can be opened multiple times!
+  
+    - Can we `import` from within an example? Yes, and all is executed in the example!
+    - Can we define properties/theorems/examples or search from within an example? Let's not do that!
 
 
 
@@ -12,6 +27,7 @@
   - Maybe generalize `Property` to yield n-Categories instead of only (-1)-Categories (`Prop`'s)
     - `class Property { String name; Diagram diagram; int n; }` -- application creates an $n$-category
     - But why stop there? We can replace `int n` by `Morphism cat;` which creates an object in the (mapped) `cat`.
+      - But this is just type theory, complicated very much..
 
 
 

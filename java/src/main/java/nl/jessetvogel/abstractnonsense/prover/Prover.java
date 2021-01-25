@@ -89,7 +89,7 @@ public class Prover extends Diagram {
             for (Theorem thm : session.getTheorems()) {
                 if (goal.isProven())
                     return;
-                for (Morphism Q : thm.getConclusions()) {
+                for (Morphism Q : new ArrayList<>(thm.getConclusions())) {
                     if (goal.isProven())
                         return;
 

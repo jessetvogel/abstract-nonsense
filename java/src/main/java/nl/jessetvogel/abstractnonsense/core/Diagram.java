@@ -349,7 +349,7 @@ public class Diagram {
         // The data must fit in the context of the property
         Mapping mapping = property.context.createMappingFromData(this, data);
         if (mapping == null || !mapping.valid())
-            throw new CreationException("Property does not apply to the given data");
+            throw new CreationException("Property " + property.name + " does not apply to the given data");
 
         // Lookup representation
         if (representations.containsKey(rep))

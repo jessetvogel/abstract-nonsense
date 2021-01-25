@@ -22,15 +22,8 @@ public class Main {
             Parser parser = new Parser(System.in, System.out, session);
             if(json)
                 parser.setOutputFormat(Formatter.OutputFormat.JSON);
-            if (!parser.parse())
+            if (!parser.parse(session))
                 break;
         }
-//        catch (ParserException e) {
-//                System.err.print("\u26A0\uFE0F Parsing error on line " + e.token.line + " at position " + e.token.position + ": " + e.getMessage());
-//            } catch (LexerException e) {
-//                System.err.print(" Lexing error: " + e.getMessage());
-//            } catch (IOException e) {
-//                e.printStackTrace();
-//            }
     }
 }

@@ -168,6 +168,10 @@ public class Session extends Diagram {
         return properties.get(name + signature);
     }
 
+    public Collection<Property> getProperties() {
+        return properties.values();
+    }
+
     public void addTheorem(Theorem thm) {
         theorems.put(thm.name, thm);
     }
