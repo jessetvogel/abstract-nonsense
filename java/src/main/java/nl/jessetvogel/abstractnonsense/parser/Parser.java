@@ -306,7 +306,7 @@ public class Parser {
             if (result == null)
                 output(formatter.messageError("Theorem does not apply to given data"));
             else if (!result.isEmpty())
-                output(formatter.messageError("The following conditions must be satisfied: " + session.strList(result)));
+                output(formatter.messageError("The following conditions must be satisfied: " + session.str(result)));
             return;
         }
 

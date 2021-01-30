@@ -55,48 +55,45 @@ public class Prover extends Diagram {
         return new ArrayList<>(proof);
     }
 
-    private void considerGoal(Goal goal) {
+    private boolean considerGoal(Goal goal) {
 //        System.out.println("\uD83D\uDCCC Consider the goal " + target.str(goal.P) + " ($" + goal.money + ")");
 
         // If there is no money left, we can't buy anything!
         if (goal.money == 0)
-            return;
+            return false;
 
         // See if any other propositions imply our goal
         for (Representation rep : target.getRepresentations(session.True)) {
             if (rep.type == Representation.Type.HOM && rep.data.get(1).equals(goal.P)) {
                 Morphism Q = rep.data.get(0);
-                createImplication(
+                if (createImplication(
                         goal,
                         new ArrayList<>(Collections.singletonList(Q)),
                         goal.money - 1,
                         session.str(Q) + " implies " + session.str(goal.P)
-                );
+                ))
+                    return true;
             }
         }
 
         // See if any representation is implied by a theorem
         for (Representation repP : target.getRepresentations(goal.P)) {
             // Consider some special cases
-            if (repP.type == Representation.Type.AND)
-                considerAnd(goal, repP);
-            if (repP.type == Representation.Type.OR)
-                considerOr(goal, repP);
-            if (repP.type == Representation.Type.HOM)
-                considerImplies(goal, repP);
+            if (repP.type == Representation.Type.AND && considerAnd(goal, repP))
+                return true;
+            if (repP.type == Representation.Type.OR && considerOr(goal, repP))
+                return true;
+            if (repP.type == Representation.Type.HOM && considerImplies(goal, repP))
+                return true;
 
             // Find applicable theorems
             for (Theorem thm : session.getTheorems()) {
-                if (goal.isProven())
-                    return;
-                for (Morphism Q : new ArrayList<>(thm.getConclusions())) {
-                    if (goal.isProven())
-                        return;
-
+                for (Morphism Q : thm.getConclusions()) {
                     // If Q == P already, then the theorem satisfies
                     if (Q.equals(goal.P)) {
                         Mapping mapping = new Mapping(thm, target);
-                        considerTheoremPartialMapping(goal, thm, mapping);
+                        if (considerTheoremPartialMapping(goal, thm, mapping))
+                            return true;
                         continue;
                     }
 
@@ -108,60 +105,105 @@ public class Prover extends Diagram {
                     List<Representation> repsQ = thm.getRepresentations(Q);
                     for (Representation repQ : repsQ) {
                         Mapping mapping = mappingFromRepresentations(thm, repQ, repP);
-                        if (mapping != null)
-                            considerTheoremPartialMapping(goal, thm, mapping);
+                        if (mapping != null && considerTheoremPartialMapping(goal, thm, mapping))
+                            return true;
                     }
                 }
             }
         }
+        return false;
     }
 
-    private void considerAnd(Goal goal, Representation rep) {
-        createImplication(goal, rep.data, goal.money, "Trivial");
+    private boolean considerAnd(Goal goal, Representation rep) {
+        return createImplication(goal, rep.data, goal.money, "Trivial");
     }
 
-    private void considerOr(Goal goal, Representation rep) {
-        createImplication(goal, rep.data.subList(0, 1), goal.money - 1, "Trivial");
-        createImplication(goal, rep.data.subList(1, 2), goal.money - 1, "Trivial");
+    private boolean considerOr(Goal goal, Representation rep) {
+        return createImplication(goal, rep.data.subList(0, 1), goal.money - 1, "Trivial")
+                || createImplication(goal, rep.data.subList(1, 2), goal.money - 1, "Trivial");
     }
 
-    private void considerImplies(Goal goal, Representation rep) {
-        // TODO
-//        if(rep.property == Global.Implies)
-//            implicationFromConditions(goal, rep.data.subList(1, diagram.knowsInstance(rep.data.get(1)) ? 1 : 2), goal.money - 1);
+    private boolean considerImplies(Goal goal, Representation rep) {
+        // TODO: the general case
+
+        // If the goal is a negation, search through theorems if it is the negation of some condition
+        if (rep.data.get(1).equals(session.False)) {
+            Morphism negP = rep.data.get(0);
+            for (Representation repNegP : target.getRepresentations(negP)) {
+                for (Theorem thm : session.getTheorems()) {
+                    for (Morphism Q : thm.getConditions()) {
+                        List<Representation> repsQ = thm.getRepresentations(Q);
+                        for (Representation repQ : repsQ) {
+                            Mapping mapping = mappingFromRepresentations(thm, repQ, repNegP);
+                            if (mapping == null)
+                                continue;
+
+                            // Search for possible mappings, and consider them all
+                            List<Mapping> mappings = new ArrayList<>();
+                            Searcher searcher = new Searcher(mapping);
+                            searcher.search(mappings);
+                            for (Mapping m : mappings) {
+                                if (!m.valid()) // TODO: this should not happen, but apparantly something is wrong with the Searcher?
+                                    continue;
+
+                                // For each conclusion R of thm, we have implications:
+                                // ~R & (thm.conditions - Q) => ~Q (which is P)
+                                for (Morphism R : thm.getConclusions()) {
+                                    try {
+                                        List<Morphism> conditions = new ArrayList<>(thm.getConditions());
+                                        conditions.remove(Q);
+                                        conditions = m.map(conditions);
+                                        conditions.add(thm.morphism(Representation.hom(m.map(R), session.False)));
+                                        if (createImplication(goal, conditions, goal.money - 1, "By the negation of Theorem " + thm.name + " applied to (" + session.str(m.map(thm.data)) + "), we have " + session.str(goal.P)))
+                                            return true;
+                                    } catch (CreationException e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return false;
     }
 
-    private void considerTheoremPartialMapping(Goal goal, Theorem thm, Mapping mapping) {
+    private boolean considerTheoremPartialMapping(Goal goal, Theorem thm, Mapping mapping) {
         // Search for possible mappings, and consider them all
         List<Mapping> mappings = new ArrayList<>();
         Searcher searcher = new Searcher(mapping);
         searcher.search(mappings);
         for (Mapping m : mappings)
-            considerTheorem(goal, thm, m);
+            if (considerTheorem(goal, thm, m))
+                return true;
+        return false;
     }
 
-    private void considerTheorem(Goal goal, Theorem thm, Mapping mapping) {
+    private boolean considerTheorem(Goal goal, Theorem thm, Mapping mapping) {
         // Construct message before applying theorem, as otherwise str(P) might evaluate to True otherwise
-        String message = "By Theorem " + thm.name + " applied to (" + session.strList(mapping.map(thm.data)) + "), we have " + session.str(goal.P);
+        String message = "By Theorem " + thm.name + " applied to (" + session.str(mapping.map(thm.data)) + "), we have " + session.str(goal.P);
 
         // See if we can apply the theorem using mapping
         int i = proof.size();
         List<Morphism> result = thm.apply(mapping);
         if (result == null)
-            return;
+            return false;
 
         // If the theorem was already applied, insert proof at appropriate place
-        if (result.isEmpty())
+        if (result.isEmpty()) {
             proof.add(i, message);
+            return true;
+        }
 
         // Otherwise, create Implication
-        else createImplication(goal, result, goal.money - 1, message);
+        return createImplication(goal, result, goal.money - 1, message);
     }
 
-    private void createImplication(Goal goal, List<Morphism> conditions, int money, String message) {
+    private boolean createImplication(Goal goal, List<Morphism> conditions, int money, String message) {
         // It is impossible to prove False, of course
         if (conditions.contains(session.False))
-            return;
+            return false;
 
         // If there are no (non-True) conditions, immediately conclude
         conditions.removeIf(P -> P.equals(session.True));
@@ -173,7 +215,8 @@ public class Prover extends Diagram {
             } catch (CreationException e) {
                 e.printStackTrace();
             }
-            return;
+
+            return true;
         }
 
         // Find or create goal for each condition
@@ -185,7 +228,7 @@ public class Prover extends Diagram {
                 g = createGoal(P, money);
                 // If the goal g was given at least this much money before, it makes no sense to try to prove this goal again!
             else if (g.money >= money)
-                return;
+                return false;
             else g.money = money;
 
             listGoals.add(g);
@@ -195,6 +238,7 @@ public class Prover extends Diagram {
         Implication implication = new Implication(goal, conditions, message);
         implications.add(implication);
         queue.addAll(listGoals);
+        return false;
     }
 
     private Mapping mappingFromRepresentations(Context context, Representation r, Representation s) {

@@ -349,7 +349,7 @@ public class Session extends Diagram {
 
     // -------- Stringify --------
 
-    public String strList(List<Morphism> list) {
+    public String str(List<Morphism> list) {
         if (list.isEmpty())
             return "";
         StringJoiner sj = new StringJoiner(", ");
@@ -377,7 +377,7 @@ public class Session extends Diagram {
             case FUNCTOR_APPLICATION:
                 return wrap(str(rep.data.get(0))) + "(" + str(rep.data.get(1)) + ")";
             case PROPERTY_APPLICATION:
-                return rep.property.name + "(" + strList(rep.data) + ")";
+                return rep.property.name + "(" + str(rep.data) + ")";
             default:
                 return null;
         }

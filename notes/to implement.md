@@ -1,26 +1,6 @@
 ### Priority
 
-- ~~Move `Diagram::str` to `Session:str` (which looks at the owner)~~
-
-- ~~Make `write` a statement~~
-
-- Implement some command that lists theorems, examples, and properties
-
-- ~~A way to reference morphisms in an example:~~
-  
-  - ~~`example::f`~~ This will mess up morphism ownership!
-  
-  - ```
-    example ZZ {
-    	// Commands executed from within ZZ
-    }
-    ```
-  
-    which can be opened multiple times!
-  
-    - Can we `import` from within an example? Yes, and all is executed in the example!
-    - Can we define properties/theorems/examples or search from within an example? Let's not do that!
-
+- If a theorem says `P -> Q`, then we should be able to use the theorem to prove `~Q -> ~P`. Simply match the negation of your goal with one of the assumptions. If it matches, then the negation of the conclusions together with the other assumptions prove your goal!
 
 
 - How to deal with modules? Cannot do `Mod : Ring -> Cat` anymore since `Ring` is a 1-category and `Cat` a 2-category.

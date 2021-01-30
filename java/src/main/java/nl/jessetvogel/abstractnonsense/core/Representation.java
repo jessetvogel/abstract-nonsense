@@ -48,6 +48,7 @@ public class Representation {
             case PROPERTY_APPLICATION:
                 return propertyApplication(property, m.map(data));
             default:
+                System.err.println("Whoops! What happened?");
                 return null;
         }
     }
