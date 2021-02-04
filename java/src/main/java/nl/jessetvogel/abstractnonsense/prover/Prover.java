@@ -2,7 +2,6 @@ package nl.jessetvogel.abstractnonsense.prover;
 
 import nl.jessetvogel.abstractnonsense.core.*;
 import nl.jessetvogel.abstractnonsense.core.Representation;
-
 import java.util.*;
 
 public class Prover extends Diagram {
@@ -115,12 +114,14 @@ public class Prover extends Diagram {
     }
 
     private boolean considerAnd(Goal goal, Representation rep) {
-        return createImplication(goal, rep.data, goal.money, "Trivial");
+        String message = "Therefore [expr:" + session.str(goal.P) + "]";
+        return createImplication(goal, rep.data, goal.money, message);
     }
 
     private boolean considerOr(Goal goal, Representation rep) {
-        return createImplication(goal, rep.data.subList(0, 1), goal.money - 1, "Trivial")
-                || createImplication(goal, rep.data.subList(1, 2), goal.money - 1, "Trivial");
+        String message = "In particular [expr:" + session.str(goal.P) + "]";
+        return createImplication(goal, rep.data.subList(0, 1), goal.money - 1, message)
+                || createImplication(goal, rep.data.subList(1, 2), goal.money - 1, message);
     }
 
     private boolean considerImplies(Goal goal, Representation rep) {
@@ -143,18 +144,25 @@ public class Prover extends Diagram {
                             Searcher searcher = new Searcher(mapping);
                             searcher.search(mappings);
                             for (Mapping m : mappings) {
-                                if (!m.valid()) // TODO: this should not happen, but apparantly something is wrong with the Searcher?
+                                if (!m.valid()) // TODO: this should not happen, but apparently something is wrong with the Searcher?
                                     continue;
 
                                 // For each conclusion R of thm, we have implications:
                                 // ~R & (thm.conditions - Q) => ~Q (which is P)
                                 for (Morphism R : thm.getConclusions()) {
                                     try {
+                                        // Construct conditions
                                         List<Morphism> conditions = new ArrayList<>(thm.getConditions());
                                         conditions.remove(Q);
                                         conditions = m.map(conditions);
                                         conditions.add(thm.morphism(Representation.hom(m.map(R), session.False)));
-                                        if (createImplication(goal, conditions, goal.money - 1, "By the negation of Theorem " + thm.name + " applied to (" + session.str(m.map(thm.data)) + "), we have " + session.str(goal.P)))
+
+                                        // Create implication
+                                        StringJoiner sj = new StringJoiner("], [expr:", "[expr:", "]");
+                                        for(Morphism f : m.map(thm.data))
+                                            sj.add(session.str(f));
+                                        String message = "From the negation of [thm:" + thm.name + "] applied to " + sj.toString() + " follows that [expr:" + session.str(goal.P) + "]";
+                                        if (createImplication(goal, conditions, goal.money - 1, message))
                                             return true;
                                     } catch (CreationException e) {
                                         e.printStackTrace();
@@ -181,8 +189,17 @@ public class Prover extends Diagram {
     }
 
     private boolean considerTheorem(Goal goal, Theorem thm, Mapping mapping) {
+        if(!mapping.valid())
+            return false;
+
         // Construct message before applying theorem, as otherwise str(P) might evaluate to True otherwise
-        String message = "By Theorem " + thm.name + " applied to (" + session.str(mapping.map(thm.data)) + "), we have " + session.str(goal.P);
+        StringJoiner sjData = new StringJoiner(", ");
+        StringJoiner sjConclusions = new StringJoiner(", ");
+        for(Morphism f : mapping.map(thm.data))
+            sjData.add("[expr:" + session.str(f) + "]");
+        for(Morphism f : mapping.map(thm.getConclusions()))
+            sjConclusions.add("[expr:" + session.str(f) + "]");
+        String message = "From [thm:" + thm.name + "] applied to " + sjData.toString() + " follows that " + sjConclusions.toString();
 
         // See if we can apply the theorem using mapping
         int i = proof.size();
@@ -234,10 +251,10 @@ public class Prover extends Diagram {
             listGoals.add(g);
         }
 
-        // Create Implication, and add goals to the queue
+        // Create an Implication, and add goals to the queue
         Implication implication = new Implication(goal, conditions, message);
         implications.add(implication);
-        queue.addAll(listGoals);
+        queue.addAll(listGoals); // TODO: we only need to add the goals that are not yet in the queue right?
         return false;
     }
 

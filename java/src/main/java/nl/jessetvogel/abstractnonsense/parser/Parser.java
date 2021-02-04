@@ -279,13 +279,18 @@ public class Parser {
         if (found(Token.Type.KEYWORD, "prove")) {
             consume();
             Token tProve = currentToken;
-            Morphism P = parseMorphism(diagram);
-            if (!session.cat(P).equals(session.Prop))
-                throw new ParserException(tProve, "Prove requires a Proposition");
-            Prover prover = new Prover(session, diagram);
-            boolean success = prover.prove(P, 10);
-            output(formatter.messageProven(success, prover.getProof()));
-            prover.detach();
+            List<Morphism> list = parseListOfMorphisms(diagram);
+            for(Morphism P : list) {
+                if (!session.cat(P).equals(session.Prop))
+                    throw new ParserException(tProve, "Prove requires a Proposition");
+            }
+            // TODO: now we prove each Proposition individually. This can probably be optimized..
+            for(Morphism P : list) {
+                Prover prover = new Prover(session, diagram);
+                boolean success = prover.prove(P, 10);
+                output(formatter.messageProven(success, prover.getProof()));
+                prover.detach();
+            }
             return;
         }
 

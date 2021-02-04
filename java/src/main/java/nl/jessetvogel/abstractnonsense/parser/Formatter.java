@@ -48,13 +48,13 @@ public class Formatter {
         }
 
         if(format == OutputFormat.JSON) {
-            if(!success)
-                return "{\"type\":\"proof\",\"success\":false}";
+//            if(!success)
+//                return "{\"type\":\"proof\",\"success\":false}";
 
             StringJoiner sjProof = new StringJoiner(",", "[", "]");
             for(String line : proof)
                 sjProof.add("\"" + escape(line) + "\"");
-            return String.format("{\"type\":\"proof\",\"success\":true,\"proof\":%s}", sjProof.toString());
+            return String.format("{\"type\":\"proof\",\"success\":%s,\"proof\":%s}", success, sjProof.toString());
         }
 
         return null;

@@ -1,6 +1,10 @@
 ### Priority
 
-- If a theorem says `P -> Q`, then we should be able to use the theorem to prove `~Q -> ~P`. Simply match the negation of your goal with one of the assumptions. If it matches, then the negation of the conclusions together with the other assumptions prove your goal!
+- `prove P, Q, R, S, ...` to allow a single prover instance to prove multiple goals at once! This prevents the prover to prove the same goal multiple times with the same cost!
+
+
+
+- ~~If a theorem says `P -> Q`, then we should be able to use the theorem to prove `~Q -> ~P`. Simply match the negation of your goal with one of the assumptions. If it matches, then the negation of the conclusions together with the other assumptions prove your goal!~~
 
 
 - How to deal with modules? Cannot do `Mod : Ring -> Cat` anymore since `Ring` is a 1-category and `Cat` a 2-category.
