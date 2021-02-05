@@ -2,6 +2,7 @@ package nl.jessetvogel.abstractnonsense.prover;
 
 import nl.jessetvogel.abstractnonsense.core.*;
 import nl.jessetvogel.abstractnonsense.core.Representation;
+
 import java.util.*;
 
 public class Prover extends Diagram {
@@ -30,24 +31,24 @@ public class Prover extends Diagram {
 
         // Prepare for a new proof
         proof.clear();
+        queue.clear();
 
         // Create goal for P
-        Goal finalGoal = createGoal(P, money);
-        queue.add(finalGoal);
+        Goal ultimateGoal = updateQueue(P, money);
 
         // As long as the final goal is not proven, and the queue is non-empty, try to prove goals
-        while (!finalGoal.isProven() && !queue.isEmpty()) {
+        while (!ultimateGoal.isProven() && !queue.isEmpty()) {
             Goal goal = queue.poll();
 
             // We do not consider proven or unnecessary goals
-            if (goal.isProven()) // || (goal != finalGoal && goal.isUnused())) // TODO: how to detect if a goal is used / unused?
+            if (goal.isProven()) // || (goal != ultimateGoal && goal.isUnused())) // TODO: how to detect if a goal is used / unused?
                 continue;
 
             // Find applicable theorems
             considerGoal(goal);
         }
 
-        return finalGoal.isProven();
+        return ultimateGoal.isProven();
     }
 
     public List<String> getProof() {
@@ -55,27 +56,40 @@ public class Prover extends Diagram {
     }
 
     private boolean considerGoal(Goal goal) {
-//        System.out.println("\uD83D\uDCCC Consider the goal " + target.str(goal.P) + " ($" + goal.money + ")");
+//        System.out.println("\uD83D\uDCCC Consider the goal " + session.str(goal.P) + " ($" + goal.money + ")");
 
-        // If there is no money left, we can't buy anything!
-        if (goal.money == 0)
+        // You can't buy anything if you don't have money!
+        if (goal.money <= 0)
             return false;
 
-        // See if any other propositions imply our goal
+        // If the goal was considered before, there is no need to search again!
+        // Just add the conditions of the implications to the queue (if they are not already in the queue)
+        if (goal.considered) {
+            for (Implication I : goal.implications) {
+                for (Morphism Q : I.conditions)
+                    updateQueue(Q, goal.money - 1);
+            }
+            return false;
+        }
+
+        // Now we are going to search for implications of our goal.
+        // Let's indicate already that that the goal is considered.
+        goal.considered = true;
+
+        // (1) See if any other propositions imply our goal
         for (Representation rep : target.getRepresentations(session.True)) {
             if (rep.type == Representation.Type.HOM && rep.data.get(1).equals(goal.P)) {
                 Morphism Q = rep.data.get(0);
                 if (createImplication(
                         goal,
                         new ArrayList<>(Collections.singletonList(Q)),
-                        goal.money - 1,
                         session.str(Q) + " implies " + session.str(goal.P)
                 ))
                     return true;
             }
         }
 
-        // See if any representation is implied by a theorem
+        // (2) See if any representation is implied by a theorem
         for (Representation repP : target.getRepresentations(goal.P)) {
             // Consider some special cases
             if (repP.type == Representation.Type.AND && considerAnd(goal, repP))
@@ -113,19 +127,42 @@ public class Prover extends Diagram {
         return false;
     }
 
+    private Goal updateQueue(Morphism Q, int money) {
+        Goal goal = goals.get(Q);
+
+        // If there is not yet a goal for Q, create one with this much money, and add it to the queue
+        if(goal == null) {
+            goal = new Goal(Q, money);
+            goals.put(Q, goal);
+            queue.add(goal);
+            return goal;
+        }
+
+        // Otherwise, it is a bit more complicated.
+        // If the goal is already in the queue, we are allowed to update its money
+        if(queue.contains(goal))
+            goal.money = Math.max(goal.money, money);
+        // If the goal is not in the queue, we set the goal's money, and add it to the queue
+        else {
+            goal.money = money;
+            queue.add(goal);
+        }
+        return goal;
+    }
+
     private boolean considerAnd(Goal goal, Representation rep) {
         String message = "Therefore [expr:" + session.str(goal.P) + "]";
-        return createImplication(goal, rep.data, goal.money, message);
+        return createImplication(goal, rep.data, message);
     }
 
     private boolean considerOr(Goal goal, Representation rep) {
         String message = "In particular [expr:" + session.str(goal.P) + "]";
-        return createImplication(goal, rep.data.subList(0, 1), goal.money - 1, message)
-                || createImplication(goal, rep.data.subList(1, 2), goal.money - 1, message);
+        return createImplication(goal, rep.data.subList(0, 1), message)
+                || createImplication(goal, rep.data.subList(1, 2), message);
     }
 
     private boolean considerImplies(Goal goal, Representation rep) {
-        // TODO: the general case
+        // TODO: the general case ?
 
         // If the goal is a negation, search through theorems if it is the negation of some condition
         if (rep.data.get(1).equals(session.False)) {
@@ -159,10 +196,10 @@ public class Prover extends Diagram {
 
                                         // Create implication
                                         StringJoiner sj = new StringJoiner("], [expr:", "[expr:", "]");
-                                        for(Morphism f : m.map(thm.data))
+                                        for (Morphism f : m.map(thm.data))
                                             sj.add(session.str(f));
                                         String message = "From the negation of [thm:" + thm.name + "] applied to " + sj.toString() + " follows that [expr:" + session.str(goal.P) + "]";
-                                        if (createImplication(goal, conditions, goal.money - 1, message))
+                                        if (createImplication(goal, conditions, message))
                                             return true;
                                     } catch (CreationException e) {
                                         e.printStackTrace();
@@ -189,15 +226,15 @@ public class Prover extends Diagram {
     }
 
     private boolean considerTheorem(Goal goal, Theorem thm, Mapping mapping) {
-        if(!mapping.valid())
+        if (!mapping.valid())
             return false;
 
         // Construct message before applying theorem, as otherwise str(P) might evaluate to True otherwise
         StringJoiner sjData = new StringJoiner(", ");
         StringJoiner sjConclusions = new StringJoiner(", ");
-        for(Morphism f : mapping.map(thm.data))
+        for (Morphism f : mapping.map(thm.data))
             sjData.add("[expr:" + session.str(f) + "]");
-        for(Morphism f : mapping.map(thm.getConclusions()))
+        for (Morphism f : mapping.map(thm.getConclusions()))
             sjConclusions.add("[expr:" + session.str(f) + "]");
         String message = "From [thm:" + thm.name + "] applied to " + sjData.toString() + " follows that " + sjConclusions.toString();
 
@@ -214,10 +251,10 @@ public class Prover extends Diagram {
         }
 
         // Otherwise, create Implication
-        return createImplication(goal, result, goal.money - 1, message);
+        return createImplication(goal, result, message);
     }
 
-    private boolean createImplication(Goal goal, List<Morphism> conditions, int money, String message) {
+    private boolean createImplication(Goal goal, List<Morphism> conditions, String message) {
         // It is impossible to prove False, of course
         if (conditions.contains(session.False))
             return false;
@@ -236,25 +273,14 @@ public class Prover extends Diagram {
             return true;
         }
 
-        // Find or create goal for each condition
-        List<Goal> listGoals = new ArrayList<>();
-        for (Morphism P : conditions) {
-            Goal g = goals.get(P);
-            // Create new goal if it does not yet exist
-            if (g == null)
-                g = createGoal(P, money);
-                // If the goal g was given at least this much money before, it makes no sense to try to prove this goal again!
-            else if (g.money >= money)
-                return false;
-            else g.money = money;
+        // Get or create sub-goal for each condition
+        for (Morphism Q : conditions)
+            updateQueue(Q, goal.money - 1);
 
-            listGoals.add(g);
-        }
-
-        // Create an Implication, and add goals to the queue
-        Implication implication = new Implication(goal, conditions, message);
-        implications.add(implication);
-        queue.addAll(listGoals); // TODO: we only need to add the goals that are not yet in the queue right?
+        // Create an Implication, and link the implication to the goal
+        Implication I = new Implication(goal, conditions, message);
+        implications.add(I);
+        goal.implications.add(I);
         return false;
     }
 
@@ -275,20 +301,18 @@ public class Prover extends Diagram {
         return mapping;
     }
 
-    private Goal createGoal(Morphism P, int money) {
-        Goal goal = new Goal(P, money);
-        goals.put(P, goal);
-        return goal;
-    }
-
     private class Goal {
 
         private Morphism P;
         private int money;
+        private boolean considered;
+        private List<Implication> implications;
 
         Goal(Morphism P, int money) {
             this.P = P;
             this.money = money;
+            considered = false;
+            implications = new ArrayList<>();
         }
 
         public boolean isProven() {

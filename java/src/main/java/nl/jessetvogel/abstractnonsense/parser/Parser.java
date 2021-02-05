@@ -168,7 +168,7 @@ public class Parser {
             if (found(Token.Type.KEYWORD, "theorem")) {
                 consume();
 
-                if(found(Token.Type.SEPARATOR, "*")) {
+                if (found(Token.Type.SEPARATOR, "*")) {
                     consume();
                     output(formatter.messageList(session.getTheorems().stream().map(thm -> thm.name).collect(Collectors.toList())));
                     return;
@@ -185,7 +185,7 @@ public class Parser {
             if (found(Token.Type.KEYWORD, "property")) {
                 consume();
 
-                if(found(Token.Type.SEPARATOR, "*")) {
+                if (found(Token.Type.SEPARATOR, "*")) {
                     consume();
                     output(formatter.messageList(session.getProperties().stream().map(property -> property.name + property.context.signature()).collect(Collectors.toList())));
                     return;
@@ -203,7 +203,7 @@ public class Parser {
             if (found(Token.Type.KEYWORD, "example")) {
                 consume();
 
-                if(found(Token.Type.SEPARATOR, "*")) {
+                if (found(Token.Type.SEPARATOR, "*")) {
                     consume();
                     output(formatter.messageList(session.getExamples().stream().map(example -> example.name).collect(Collectors.toList())));
                     return;
@@ -279,18 +279,25 @@ public class Parser {
         if (found(Token.Type.KEYWORD, "prove")) {
             consume();
             Token tProve = currentToken;
-            List<Morphism> list = parseListOfMorphisms(diagram);
-            for(Morphism P : list) {
-                if (!session.cat(P).equals(session.Prop))
+
+            Prover prover = new Prover(session, diagram);
+
+            while(true) {
+                Morphism P = parseMorphism(diagram);
+                if (!session.cat(P).equals(session.Prop)) {
+                    prover.detach();
                     throw new ParserException(tProve, "Prove requires a Proposition");
-            }
-            // TODO: now we prove each Proposition individually. This can probably be optimized..
-            for(Morphism P : list) {
-                Prover prover = new Prover(session, diagram);
-                boolean success = prover.prove(P, 10);
+                }
+
+                boolean success = prover.prove(P, 5);
                 output(formatter.messageProven(success, prover.getProof()));
-                prover.detach();
+
+                if(!found(Token.Type.SEPARATOR, ","))
+                    break;
+                consume();
             }
+
+            prover.detach();
             return;
         }
 
@@ -318,7 +325,7 @@ public class Parser {
         if (found(Token.Type.KEYWORD, "property")) {
             Token tProperty = consume();
 
-            if(diagram != session)
+            if (diagram != session)
                 throw new ParserException(tProperty, "Properties cannot be defined within example");
 
             List<String> identifiers = parseListOfIdentifiers();
@@ -355,7 +362,7 @@ public class Parser {
         if (found(Token.Type.KEYWORD, "theorem")) {
             Token tTheorem = consume();
 
-            if(diagram != session)
+            if (diagram != session)
                 throw new ParserException(tTheorem, "Theorems cannot be defined within example");
 
             Token tIdentifier = consume(Token.Type.IDENTIFIER);
@@ -380,7 +387,7 @@ public class Parser {
         if (found(Token.Type.KEYWORD, "example")) {
             Token tExample = consume();
 
-            if(diagram != session)
+            if (diagram != session)
                 throw new ParserException(tExample, "Examples cannot be defined within example");
 
             String name = consume(Token.Type.IDENTIFIER).data;
@@ -392,7 +399,7 @@ public class Parser {
             }
 
             consume(Token.Type.SEPARATOR, "{");
-            while(!found(Token.Type.SEPARATOR, "}"))
+            while (!found(Token.Type.SEPARATOR, "}"))
                 parseStatement(example);
             consume(Token.Type.SEPARATOR, "}");
             return;
@@ -401,7 +408,7 @@ public class Parser {
         if (found(Token.Type.KEYWORD, "search")) {
             Token tSearch = consume();
 
-            if(diagram != session)
+            if (diagram != session)
                 throw new ParserException(tSearch, "Cannot search from within example");
 
             Context context = new Context(session, session, "");
@@ -418,10 +425,10 @@ public class Parser {
             return;
         }
 
-        if(found(Token.Type.KEYWORD, "write")) {
+        if (found(Token.Type.KEYWORD, "write")) {
             Token tWrite = consume();
             String name = consume(Token.Type.IDENTIFIER).data;
-            if(diagram.hasSymbol(name))
+            if (diagram.hasSymbol(name))
                 throw new ParserException(tWrite, "Symbol " + name + " is already used");
             consume(Token.Type.SEPARATOR, ":=");
             Morphism f = parseMorphism(diagram);
@@ -784,11 +791,10 @@ public class Parser {
     private MorphismPair parseMorphismType(Diagram diagram) throws ParserException, IOException, Lexer.LexerException {
         Morphism f = parseMorphism(diagram);
         Morphism g;
-        if(found(Token.Type.SEPARATOR, "->")) {
+        if (found(Token.Type.SEPARATOR, "->")) {
             consume();
             g = parseMorphism(diagram);
-        }
-        else {
+        } else {
             g = null;
         }
         return new MorphismPair(f, g);
