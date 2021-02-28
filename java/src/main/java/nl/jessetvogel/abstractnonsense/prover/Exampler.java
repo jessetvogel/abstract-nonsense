@@ -14,7 +14,7 @@ public class Exampler {
         this.context = context;
     }
 
-    public List<Mapping> search() {
+    public List<Mapping> search(int max) {
         List<Mapping> mappings = new ArrayList<>();
 
         Set<Diagram> diagrams = new HashSet<>(session.getExamples());
@@ -22,7 +22,7 @@ public class Exampler {
         for (Diagram diagram : diagrams) {
             // Search
             Searcher searcher = new Searcher(context, diagram);
-            searcher.search(mappings);
+            searcher.search(mappings, max);
         }
 
         return mappings;

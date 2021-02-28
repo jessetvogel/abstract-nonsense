@@ -240,8 +240,10 @@ public class Prover extends Diagram {
         StringJoiner sjConclusions = new StringJoiner(", ");
         for (Morphism f : mapping.map(thm.data))
             sjData.add("[expr:" + session.str(f) + "]");
-        for (Morphism f : mapping.map(thm.getConclusions()))
-            sjConclusions.add("[expr:" + session.str(f) + "]");
+        for (Morphism f : mapping.map(thm.getConclusions())) {
+            if(!f.equals(session.True))
+                sjConclusions.add("[expr:" + session.str(f) + "]");
+        }
         String message = "From [thm:" + thm.name + "] applied to " + sjData.toString() + " follows that " + sjConclusions.toString();
 
         // See if we can apply the theorem using mapping

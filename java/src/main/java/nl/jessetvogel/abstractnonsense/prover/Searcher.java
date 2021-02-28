@@ -26,14 +26,22 @@ public class Searcher extends Mapping {
     }
 
     public void search(List<Mapping> mappings) {
+        search(mappings, Integer.MAX_VALUE);
+    }
+
+    public void search(List<Mapping> mappings, int limit) {
         // Setup search plan
         SearchPlan plan = new SearchPlan();
 
         // Find mappings
-        find(plan, mappings, 0);
+        find(plan, mappings, 0, limit);
     }
 
-    private void find(SearchPlan plan, List<Mapping> mappings, int depth) {
+    private void find(SearchPlan plan, List<Mapping> mappings, int depth, int limit) {
+        // If we already found 'limit' examples, stop searching
+        if(mappings.size() >= limit)
+            return;
+
         // If the whole queue is mapped, the mapping should be complete, and we store it!
         if(depth >= plan.queue.size()) {
             mappings.add(new Mapping(this));
@@ -43,7 +51,7 @@ public class Searcher extends Mapping {
         // Get morphism from the queue, if it is already determined, we can skip this step
         Morphism f = plan.queue.get(depth);
         if(determined(f)) {
-            find(plan, mappings, depth + 1);
+            find(plan, mappings, depth + 1, limit);
             System.err.println("Weird, but okay..");
             return;
         }
@@ -58,7 +66,7 @@ public class Searcher extends Mapping {
             // Set list and try mapping
             recentlyMapped = mapped;
             if(set(f, g) && setInduced(plan.induced.get(depth)))
-                find(plan, mappings, depth + 1);
+                find(plan, mappings, depth + 1, limit);
 
             // Unset and clear list
             unset(mapped);

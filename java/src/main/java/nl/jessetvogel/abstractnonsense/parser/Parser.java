@@ -421,7 +421,7 @@ public class Parser {
             consume(Token.Type.SEPARATOR, "}");
 
             Exampler ex = new Exampler(session, context);
-            output(formatter.messageExamples(ex.search()));
+            output(formatter.messageExamples(ex.search(20))); // Magic number!
             context.detach();
             return;
         }
