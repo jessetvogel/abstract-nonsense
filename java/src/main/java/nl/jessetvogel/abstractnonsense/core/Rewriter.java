@@ -16,6 +16,8 @@ public class Rewriter {
     }
 
     public void addRule(List<Morphism> input, List<Morphism> output) {
+//        System.out.println("Add rw-rule: " + session.str(input) + " --> " + session.str(output));
+
         Rule rule = new Rule(input, output);
         rule.normalize();
         rules.add(rule);

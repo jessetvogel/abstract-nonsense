@@ -75,6 +75,10 @@ public class Session extends Diagram {
         return C;
     }
 
+    public int checkpoint() {
+        return indexCounter;
+    }
+
     public int degree(Morphism x) {
         return degree(x.index) - x.k;
     }

@@ -6,6 +6,8 @@ import java.util.*;
 
 public class Searcher extends Mapping {
 
+    private int checkpoint = Integer.MAX_VALUE;
+
     // TODO: maybe it is unnecessary to explicitly keep track of 'depth' just keep a stack and work on the last layer, so to say
     private List<Integer> recentlyMapped;
 
@@ -17,6 +19,10 @@ public class Searcher extends Mapping {
     public Searcher(Mapping mapping) {
         super(mapping);
         recentlyMapped = null;
+    }
+
+    public void setCheckpoint(int checkpoint) {
+        this.checkpoint = checkpoint;
     }
 
     public void search(List<Mapping> mappings) {
@@ -116,6 +122,9 @@ public class Searcher extends Mapping {
 
         // Find morphisms in target whose cat, dom, cod are what we are looking for
         for(int index : diagram.indices) {
+            if(index > checkpoint) // Skip all morphisms that were created past the checkpoint
+                continue;
+
             Morphism g = session.morphismFromIndex(index, f.k);
             if(g == null || !session.cat(g).equals(cat) || !session.dom(g).equals(dom) || !session.cod(g).equals(cod))
                 continue;

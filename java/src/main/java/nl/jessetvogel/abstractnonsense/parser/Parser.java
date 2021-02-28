@@ -281,6 +281,7 @@ public class Parser {
             Token tProve = currentToken;
 
             Prover prover = new Prover(session, diagram);
+            prover.setCheckpoint(session.checkpoint()); // So that it won't use morphisms in its prove that are not created yet! This probably is not the best way to do things, but otherwise the number of morphisms will explode in some cases..
 
             while(true) {
                 Morphism P = parseMorphism(diagram);

@@ -48,9 +48,6 @@ public class Formatter {
         }
 
         if(format == OutputFormat.JSON) {
-//            if(!success)
-//                return "{\"type\":\"proof\",\"success\":false}";
-
             StringJoiner sjProof = new StringJoiner(",", "[", "]");
             for(String line : proof)
                 sjProof.add("\"" + escape(line) + "\"");

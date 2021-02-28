@@ -13,6 +13,7 @@ public class Prover extends Diagram {
     private final Map<Morphism, Goal> goals;
     private final Queue<Goal> queue;
     private final List<Implication> implications;
+    private int checkpoint = Integer.MAX_VALUE;
 
     public Prover(Session session, Diagram target) {
         super(session, target, "prover");
@@ -55,12 +56,16 @@ public class Prover extends Diagram {
         return new ArrayList<>(proof);
     }
 
-    private boolean considerGoal(Goal goal) {
-//        System.out.println("\uD83D\uDCCC Consider the goal " + session.str(goal.P) + " ($" + goal.money + ")");
+    public void setCheckpoint(int checkpoint) {
+        this.checkpoint = checkpoint;
+    }
+
+    private void considerGoal(Goal goal) {
+        // System.err.println("Consider the goal " + session.str(goal.P) + " ($" + goal.money + ")");
 
         // You can't buy anything if you don't have money!
         if (goal.money <= 0)
-            return false;
+            return;
 
         // If the goal was considered before, there is no need to search again!
         // Just add the conditions of the implications to the queue (if they are not already in the queue)
@@ -69,7 +74,7 @@ public class Prover extends Diagram {
                 for (Morphism Q : I.conditions)
                     updateQueue(Q, goal.money - 1);
             }
-            return false;
+            return;
         }
 
         // Now we are going to search for implications of our goal.
@@ -85,7 +90,7 @@ public class Prover extends Diagram {
                         new ArrayList<>(Collections.singletonList(Q)),
                         session.str(Q) + " implies " + session.str(goal.P)
                 ))
-                    return true;
+                    return;
             }
         }
 
@@ -93,11 +98,11 @@ public class Prover extends Diagram {
         for (Representation repP : target.getRepresentations(goal.P)) {
             // Consider some special cases
             if (repP.type == Representation.Type.AND && considerAnd(goal, repP))
-                return true;
+                return;
             if (repP.type == Representation.Type.OR && considerOr(goal, repP))
-                return true;
+                return;
             if (repP.type == Representation.Type.HOM && considerImplies(goal, repP))
-                return true;
+                return;
 
             // Find applicable theorems
             for (Theorem thm : session.getTheorems()) {
@@ -106,7 +111,7 @@ public class Prover extends Diagram {
                     if (Q.equals(goal.P)) {
                         Mapping mapping = new Mapping(thm, target);
                         if (considerTheoremPartialMapping(goal, thm, mapping))
-                            return true;
+                            return;
                         continue;
                     }
 
@@ -119,12 +124,11 @@ public class Prover extends Diagram {
                     for (Representation repQ : repsQ) {
                         Mapping mapping = mappingFromRepresentations(thm, repQ, repP);
                         if (mapping != null && considerTheoremPartialMapping(goal, thm, mapping))
-                            return true;
+                            return;
                     }
                 }
             }
         }
-        return false;
     }
 
     private Goal updateQueue(Morphism Q, int money) {
@@ -179,6 +183,7 @@ public class Prover extends Diagram {
                             // Search for possible mappings, and consider them all
                             List<Mapping> mappings = new ArrayList<>();
                             Searcher searcher = new Searcher(mapping);
+                            searcher.setCheckpoint(checkpoint);
                             searcher.search(mappings);
                             for (Mapping m : mappings) {
                                 if (!m.valid()) // TODO: this should not happen, but apparently something is wrong with the Searcher?
@@ -218,6 +223,7 @@ public class Prover extends Diagram {
         // Search for possible mappings, and consider them all
         List<Mapping> mappings = new ArrayList<>();
         Searcher searcher = new Searcher(mapping);
+        searcher.setCheckpoint(checkpoint);
         searcher.search(mappings);
         for (Mapping m : mappings)
             if (considerTheorem(goal, thm, m))
@@ -277,6 +283,8 @@ public class Prover extends Diagram {
         for (Morphism Q : conditions)
             updateQueue(Q, goal.money - 1);
 
+//        System.err.println("Create implication: " + session.str(conditions) + " => " + session.str(goal.P));
+
         // Create an Implication, and link the implication to the goal
         Implication I = new Implication(goal, conditions, message);
         implications.add(I);
@@ -306,7 +314,7 @@ public class Prover extends Diagram {
         private Morphism P;
         private int money;
         private boolean considered;
-        private List<Implication> implications;
+        private final List<Implication> implications;
 
         Goal(Morphism P, int money) {
             this.P = P;
